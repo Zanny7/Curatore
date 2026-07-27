@@ -105,7 +105,7 @@ export function RightQueueSidebar({
           </div>
         </div>
 
-        <div className="h-28 shrink-0 overflow-hidden border-t border-[var(--app-sidebar-border)] px-5 py-3 lg:h-60 lg:p-4">
+        <div className="h-28 shrink-0 overflow-hidden border-t border-[var(--app-sidebar-border)] px-5 py-3 lg:h-56 lg:p-4">
           <div className="mx-auto flex h-full w-full max-w-md flex-col text-center lg:max-w-none lg:text-left">
             <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400 lg:mb-3 lg:text-xs">
               Now playing
