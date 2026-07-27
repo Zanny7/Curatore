@@ -105,17 +105,17 @@ export function RightQueueSidebar({
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-[var(--app-sidebar-border)] px-5 py-4 lg:p-5">
-          <div className="mx-auto w-full max-w-md text-center lg:max-w-none lg:text-left">
+        <div className="h-28 shrink-0 overflow-hidden border-t border-[var(--app-sidebar-border)] px-5 py-3 lg:h-60 lg:p-4">
+          <div className="mx-auto flex h-full w-full max-w-md flex-col text-center lg:max-w-none lg:text-left">
             <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400 lg:mb-3 lg:text-xs">
               Now playing
             </p>
             {currentVideo ? (
               <>
-                <div className="flex items-center gap-3 rounded-lg p-2 text-left lg:hidden">
+                <div className="flex min-h-0 flex-1 items-center gap-3 rounded-lg text-left lg:hidden">
                   <img
                     alt=""
-                    className="h-14 w-20 shrink-0 rounded-md object-cover"
+                    className="h-12 w-[4.5rem] shrink-0 rounded-md object-cover"
                     src={currentVideo.thumbnailUrl}
                   />
                   <div className="min-w-0">
@@ -135,26 +135,28 @@ export function RightQueueSidebar({
                     ) : null}
                   </div>
                 </div>
-                <div className="hidden space-y-3 lg:block">
+                <div className="hidden min-h-0 flex-1 flex-col gap-2 lg:flex">
                   <img
                     alt=""
-                    className="mx-auto aspect-video w-full max-w-none rounded-lg object-cover"
+                    className="mx-auto h-28 w-full max-w-none shrink-0 rounded-lg object-cover"
                     src={currentVideo.thumbnailUrl}
                   />
-                  <div>
+                  <div className="min-h-0">
                     <p className="font-semibold text-white">
                       <MarqueeText text={currentVideo.title} />
                     </p>
-                    <p className="text-sm text-zinc-400">
+                    <p className="truncate text-sm text-zinc-400">
                       {currentVideo.channelTitle}
                     </p>
                   </div>
                 </div>
               </>
             ) : (
-              <p className="text-sm text-zinc-400">
-                Load a playlist to start.
-              </p>
+              <div className="flex min-h-0 flex-1 items-center justify-center lg:justify-start lg:items-start">
+                <p className="text-sm text-zinc-400">
+                  Load a playlist to start.
+                </p>
+              </div>
             )}
           </div>
         </div>
