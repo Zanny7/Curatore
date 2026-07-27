@@ -239,6 +239,13 @@ export default function PlaylistDetailPage() {
     setDragIndex(null);
   }
 
+  function selectSortTag(tag: string | null) {
+    setSelectedSortTag(tag);
+    if (!tag) {
+      setSort((current) => (current?.key === "tags" ? null : current));
+    }
+  }
+
   function playFrom(videoId?: string) {
     if (!playlist || playlist.videos.length === 0) {
       return;
@@ -434,7 +441,7 @@ export default function PlaylistDetailPage() {
             <TagSortControl
               active={sort?.key === "tags"}
               direction={sort?.key === "tags" ? sort.direction : undefined}
-              onSelect={setSelectedSortTag}
+              onSelect={selectSortTag}
               onToggle={() =>
                 selectedSortTag ? toggleSort("tags") : undefined
               }
@@ -473,7 +480,7 @@ export default function PlaylistDetailPage() {
               active={sort?.key === "tags"}
               className="pl-2"
               direction={sort?.key === "tags" ? sort.direction : undefined}
-              onSelect={setSelectedSortTag}
+              onSelect={selectSortTag}
               onToggle={() =>
                 selectedSortTag ? toggleSort("tags") : undefined
               }
@@ -610,7 +617,12 @@ export default function PlaylistDetailPage() {
                       ariaLabel={`Edit tags for ${video.title}`}
                       editor={editorKind === "tags" ? editor : null}
                       icon={Tags}
-                      label={<TagPills keywords={metadata.keywords} />}
+                      label={
+                        <TagPills
+                          keywords={metadata.keywords}
+                          selectedTag={selectedSortTag}
+                        />
+                      }
                       onClick={() => toggleInlineEditor(video.id, "tags")}
                     />
                   </div>
@@ -666,7 +678,10 @@ export default function PlaylistDetailPage() {
                     >
                       <Tags aria-hidden="true" className="h-4 w-4 shrink-0" />
                     </button>
-                    <TagPills keywords={metadata.keywords} />
+                    <TagPills
+                      keywords={metadata.keywords}
+                      selectedTag={selectedSortTag}
+                    />
                     {editorKind === "tags" ? editor : null}
                   </div>
                 </div>
@@ -900,7 +915,7 @@ function TagSortControl({
   active: boolean;
   className?: string;
   direction?: SortDirection;
-  onSelect: (tag: string) => void;
+  onSelect: (tag: string | null) => void;
   onToggle: () => void;
   selectedTag: string | null;
   tags: string[];
@@ -941,7 +956,7 @@ function TagSortControl({
         {selectedTag ? (
           <span className="truncate">{selectedTag}</span>
         ) : (
-          <Tags aria-hidden="true" className="h-3 w-3" />
+          <span>-</span>
         )}
         <ChevronDown aria-hidden="true" className="h-3 w-3 shrink-0" />
       </button>
@@ -955,6 +970,25 @@ function TagSortControl({
             Sort by tag
           </p>
           <div className="max-h-48 overflow-y-auto">
+            <button
+              aria-selected={!selectedTag}
+              className={`flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-xs transition ${
+                !selectedTag
+                  ? "bg-accent-soft text-accent-strong"
+                  : "text-zinc-300 hover:bg-white/5 hover:text-white"
+              }`}
+              onClick={() => {
+                onSelect(null);
+                setOpen(false);
+              }}
+              role="option"
+              type="button"
+            >
+              <span>-</span>
+              {!selectedTag ? (
+                <Check aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+              ) : null}
+            </button>
             {tags.map((tag) => {
               const selected =
                 tag.toLocaleLowerCase() === selectedTag?.toLocaleLowerCase();
@@ -1025,7 +1059,13 @@ function CompactSongControl({
   );
 }
 
-function TagPills({ keywords }: { keywords: SongMetadata["keywords"] }) {
+function TagPills({
+  keywords,
+  selectedTag
+}: {
+  keywords: SongMetadata["keywords"];
+  selectedTag: string | null;
+}) {
   if (keywords.length === 0) {
     return null;
   }
@@ -1040,17 +1080,26 @@ function TagPills({ keywords }: { keywords: SongMetadata["keywords"] }) {
 
   return (
     <span className="inline-flex min-w-0 flex-col items-stretch gap-1">
-      {sortedKeywords.map((keyword) => (
-        <span
-          className="group/tag relative inline-flex min-h-5 max-w-28 items-center justify-center rounded-full bg-accent-soft px-2 py-0.5 text-center text-xs font-semibold leading-none text-accent-strong"
-          key={keyword.name}
-        >
-          <span className="truncate">{keyword.name.slice(0, 12)}</span>
-          <span className="pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden h-6 -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-md border border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] px-2 text-[9px] leading-none text-zinc-200 shadow-lg group-hover/tag:flex">
-            {keyword.rating}/10
+      {sortedKeywords.map((keyword) => {
+        const highlighted =
+          keyword.name.toLocaleLowerCase() ===
+          selectedTag?.toLocaleLowerCase();
+        return (
+          <span
+            className={`group/tag relative inline-flex min-h-5 max-w-28 items-center justify-center rounded-full px-2 py-0.5 text-center text-xs font-semibold leading-none ${
+              highlighted
+                ? "bg-accent-soft text-accent-strong"
+                : "bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/[0.06] dark:text-zinc-400 dark:ring-white/10"
+            }`}
+            key={keyword.name}
+          >
+            <span className="truncate">{keyword.name.slice(0, 12)}</span>
+            <span className="pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden h-6 -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-md border border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] px-2 text-[9px] leading-none text-zinc-200 shadow-lg group-hover/tag:flex">
+              {keyword.rating}/10
+            </span>
           </span>
-        </span>
-      ))}
+        );
+      })}
     </span>
   );
 }
