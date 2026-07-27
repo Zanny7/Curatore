@@ -323,14 +323,14 @@ export default function PlaylistDetailPage() {
 
       {playlist.videos.length > 0 ? (
         <div className="overflow-visible rounded-2xl border border-zinc-200 bg-white/85 shadow-sm backdrop-blur dark:border-white/10 dark:bg-neutral-900/85">
-          <div className="hidden grid-cols-[2rem_2.5rem_5rem_minmax(0,1fr)_5rem_7rem_10rem_2.5rem] items-center gap-3 border-b border-zinc-200 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:border-white/10 2xl:grid">
+          <div className="hidden grid-cols-[1.25rem_2rem_6rem_minmax(0,1fr)_6rem_6rem_10rem_2.5rem] items-center gap-3 border-b border-zinc-200 px-3 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:border-white/10 2xl:grid">
             <span />
             <span />
             <span />
-            <span>Song</span>
-            <span>Frequency</span>
-            <span>Rating</span>
-            <span>Tags</span>
+            <span className="text-center">Song</span>
+            <span className="text-center">Frequency</span>
+            <span className="text-center">Rating</span>
+            <span className="text-center">Tags</span>
             <span />
           </div>
           {playlist.videos.map((video, index) => {
@@ -729,14 +729,22 @@ function TagPills({ keywords }: { keywords: SongMetadata["keywords"] }) {
     return <span>—</span>;
   }
 
+  const sortedKeywords = [...keywords]
+    .slice(0, 3)
+    .sort(
+      (left, right) =>
+        right.rating - left.rating ||
+        left.name.localeCompare(right.name, undefined, { sensitivity: "base" })
+    );
+
   return (
-    <span className="flex min-w-0 flex-wrap gap-1">
-      {keywords.slice(0, 3).map((keyword) => (
+    <span className="inline-flex min-w-0 flex-col items-stretch gap-1">
+      {sortedKeywords.map((keyword) => (
         <span
-          className="group/tag relative inline-flex max-w-20 items-center rounded-full bg-accent-soft px-2 py-0.5 text-[9px] font-semibold text-accent-strong"
+          className="group/tag relative inline-flex min-h-5 max-w-28 items-center justify-center rounded-full bg-accent-soft px-2 py-0.5 text-center text-xs font-semibold leading-none text-accent-strong"
           key={keyword.name}
         >
-          <span className="truncate">{keyword.name}</span>
+          <span className="truncate">{keyword.name.slice(0, 12)}</span>
           <span className="pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden h-6 -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-md border border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] px-2 text-[9px] leading-none text-zinc-200 shadow-lg group-hover/tag:flex">
             {keyword.rating}/10
           </span>
@@ -974,7 +982,7 @@ function SongInlineEditor({
   );
 
   function addTag(name: string) {
-    const trimmed = name.trim();
+    const trimmed = name.trim().slice(0, 12);
     if (!trimmed) {
       return;
     }
@@ -1108,7 +1116,8 @@ function SongInlineEditor({
               aria-label="Tag name"
               className="h-9 min-w-0 rounded-lg border border-[var(--app-sidebar-border)] bg-white/5 px-2.5 text-xs text-white outline-none placeholder:text-zinc-500 focus:border-accent"
               disabled={atTagLimit}
-              onChange={(event) => setTagName(event.target.value)}
+              maxLength={12}
+              onChange={(event) => setTagName(event.target.value.slice(0, 12))}
               placeholder={atTagLimit ? "3 tag limit reached" : 'e.g. "Pop"'}
               value={tagName}
             />
@@ -1341,7 +1350,8 @@ function BulkMetadataDialog({
           <input
             className="h-10 rounded-lg border border-white/10 bg-neutral-900 px-3 text-sm text-white outline-none focus:border-accent"
             list="curatore-bulk-tag-suggestions"
-            onChange={(event) => setTagName(event.target.value)}
+            maxLength={12}
+            onChange={(event) => setTagName(event.target.value.slice(0, 12))}
             placeholder={'Enter a tag, e.g. "Pop"'}
             value={tagName}
           />
@@ -1382,7 +1392,7 @@ function BulkMetadataDialog({
               frequency: frequency ? Number(frequency) : undefined,
               rating: rating ? Number(rating) : undefined,
               tag: tagName.trim()
-                ? { name: tagName.trim(), rating: tagRating }
+                ? { name: tagName.trim().slice(0, 12), rating: tagRating }
                 : undefined
             })
           }
