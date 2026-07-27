@@ -3,10 +3,13 @@ import type {
   BackgroundPreference,
   BackgroundThemeId,
   Playlist,
+  SongMetadata,
   ThemePreference
 } from "@/types";
 
 const IMPORTED_PLAYLISTS_KEY = "curatore.importedPlaylists";
+const CURATED_PLAYLISTS_KEY = "curatore.curatedPlaylists";
+const SONG_METADATA_KEY = "curatore.songMetadata";
 const THEME_KEY = "curatore.theme";
 const ACCENT_KEY = "curatore.accent";
 const BACKGROUND_KEY = "curatore.background";
@@ -75,6 +78,50 @@ export function writeStoredPlaylists(playlists: Playlist[]) {
   }
 
   window.localStorage.setItem(IMPORTED_PLAYLISTS_KEY, JSON.stringify(playlists));
+}
+
+export function readStoredCuratedPlaylists(): Playlist[] {
+  if (!canUseStorage()) {
+    return [];
+  }
+
+  try {
+    const value = window.localStorage.getItem(CURATED_PLAYLISTS_KEY);
+    return value ? (JSON.parse(value) as Playlist[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function writeStoredCuratedPlaylists(playlists: Playlist[]) {
+  if (!canUseStorage()) {
+    return;
+  }
+
+  window.localStorage.setItem(CURATED_PLAYLISTS_KEY, JSON.stringify(playlists));
+}
+
+export function readStoredSongMetadata(): Record<string, SongMetadata> {
+  if (!canUseStorage()) {
+    return {};
+  }
+
+  try {
+    const value = window.localStorage.getItem(SONG_METADATA_KEY);
+    return value ? (JSON.parse(value) as Record<string, SongMetadata>) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function writeStoredSongMetadata(
+  metadata: Record<string, SongMetadata>
+) {
+  if (!canUseStorage()) {
+    return;
+  }
+
+  window.localStorage.setItem(SONG_METADATA_KEY, JSON.stringify(metadata));
 }
 
 export function readStoredTheme(): ThemePreference | null {

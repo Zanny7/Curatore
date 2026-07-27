@@ -9,18 +9,40 @@ import {
   useMemo,
   useState
 } from "react";
-import { readStoredPlaylists, writeStoredPlaylists } from "@/lib/storage";
-import type { PlayerState, Playlist } from "@/types";
+import {
+  readStoredCuratedPlaylists,
+  readStoredPlaylists,
+  readStoredSongMetadata,
+  writeStoredCuratedPlaylists,
+  writeStoredPlaylists,
+  writeStoredSongMetadata
+} from "@/lib/storage";
+import type { PlayerState, Playlist, SongMetadata, VideoItem } from "@/types";
 
 type PlayerContextValue = PlayerState & {
   importedPlaylists: Playlist[];
+  curatedPlaylists: Playlist[];
   allPlaylists: Playlist[];
+  songMetadata: Record<string, SongMetadata>;
   currentVideo: PlayerState["queue"][number] | null;
   playerReady: boolean;
   playlistsLoaded: boolean;
   addImportedPlaylist: (playlist: Playlist) => void;
-  loadPlaylist: (playlist: Playlist) => void;
+  createCuratedPlaylist: (name: string, videos?: VideoItem[]) => Playlist;
+  loadPlaylist: (playlist: Playlist, videoId?: string) => void;
+  copyPlaylistVideos: (
+    sourcePlaylistId: string,
+    destinationPlaylistId: string,
+    videoIds: string[]
+  ) => void;
+  movePlaylistVideos: (
+    sourcePlaylistId: string,
+    destinationPlaylistId: string,
+    videoIds: string[]
+  ) => void;
+  removePlaylistVideos: (playlistId: string, videoIds: string[]) => void;
   removePlaylistVideo: (playlistId: string, videoId: string) => void;
+  updateSongMetadata: (videoId: string, metadata: SongMetadata) => void;
   updatePlaylistVideo: (
     playlistId: string,
     videoId: string,
@@ -40,6 +62,10 @@ const PlayerContext = createContext<PlayerContextValue | null>(null);
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const [importedPlaylists, setImportedPlaylists] = useState<Playlist[]>([]);
+  const [curatedPlaylists, setCuratedPlaylists] = useState<Playlist[]>([]);
+  const [songMetadata, setSongMetadata] = useState<
+    Record<string, SongMetadata>
+  >({});
   const [playlistsLoaded, setPlaylistsLoaded] = useState(false);
   const [playerReady, setPlayerReady] = useState(false);
   const [state, setState] = useState<PlayerState>({
@@ -54,6 +80,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setImportedPlaylists(readStoredPlaylists());
+    setCuratedPlaylists(readStoredCuratedPlaylists());
+    setSongMetadata(readStoredSongMetadata());
     setPlaylistsLoaded(true);
   }, []);
 
@@ -66,67 +94,176 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const loadPlaylist = useCallback((playlist: Playlist) => {
+  const createCuratedPlaylist = useCallback(
+    (name: string, videos: VideoItem[] = []) => {
+      const playlist: Playlist = {
+        id: `curated-${crypto.randomUUID()}`,
+        name: name.trim(),
+        thumbnailUrl:
+          videos[0]?.thumbnailUrl ??
+          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='360'%3E%3Crect width='100%25' height='100%25' fill='%2318181b'/%3E%3Cpath d='M210 120h220v120H210z' rx='16' fill='%2327272a'/%3E%3Cpath d='M280 150l90 30-90 30z' fill='%23d4d4d8'/%3E%3C/svg%3E",
+        videoCount: videos.length,
+        source: "curated",
+        videos
+      };
+
+      setCuratedPlaylists((current) => {
+        const next = [playlist, ...current];
+        writeStoredCuratedPlaylists(next);
+        return next;
+      });
+
+      return playlist;
+    },
+    []
+  );
+
+  const loadPlaylist = useCallback((playlist: Playlist, videoId?: string) => {
+    const requestedIndex = videoId
+      ? playlist.videos.findIndex((video) => video.id === videoId)
+      : 0;
     setState((current) => ({
       ...current,
       selectedPlaylist: playlist,
       queue: playlist.videos,
-      currentIndex: 0,
+      currentIndex: requestedIndex >= 0 ? requestedIndex : 0,
       isPlaying: false
     }));
   }, []);
 
-  const removePlaylistVideo = useCallback((playlistId: string, videoId: string) => {
-    const playlist = importedPlaylists.find((item) => item.id === playlistId);
-    if (!playlist) {
-      return;
-    }
+  const removePlaylistVideos = useCallback(
+    (playlistId: string, videoIds: string[]) => {
+      const ids = new Set(videoIds);
+      const updateCollection = (playlists: Playlist[]) =>
+        playlists.map((playlist) => {
+          if (playlist.id !== playlistId) {
+            return playlist;
+          }
 
-    const videos = playlist.videos.filter((video) => video.id !== videoId);
-    const updatedPlaylist: Playlist = {
-      ...playlist,
-      videoCount: videos.length,
-      videos
-    };
+          const videos = playlist.videos.filter((video) => !ids.has(video.id));
+          return { ...playlist, videoCount: videos.length, videos };
+        });
 
-    setImportedPlaylists((current) => {
-      const next = current.map((item) =>
-        item.id === playlistId ? updatedPlaylist : item
+      setImportedPlaylists((current) => {
+        const next = updateCollection(current);
+        writeStoredPlaylists(next);
+        return next;
+      });
+      setCuratedPlaylists((current) => {
+        const next = updateCollection(current);
+        writeStoredCuratedPlaylists(next);
+        return next;
+      });
+
+      setState((current) => {
+        if (current.selectedPlaylist?.id !== playlistId) {
+          return current;
+        }
+
+        const currentVideo = current.queue[current.currentIndex] ?? null;
+        const queue = current.queue.filter((video) => !ids.has(video.id));
+        const nextIndex = currentVideo
+          ? Math.max(
+              0,
+              queue.findIndex((video) => video.id === currentVideo.id)
+            )
+          : 0;
+
+        return {
+          ...current,
+          selectedPlaylist: {
+            ...current.selectedPlaylist,
+            videoCount: queue.length,
+            videos: queue
+          },
+          queue,
+          currentIndex:
+            queue.length === 0 ? 0 : Math.min(nextIndex, queue.length - 1),
+          isPlaying: queue.length > 0 ? current.isPlaying : false
+        };
+      });
+    },
+    []
+  );
+
+  const removePlaylistVideo = useCallback(
+    (playlistId: string, videoId: string) => {
+      removePlaylistVideos(playlistId, [videoId]);
+    },
+    [removePlaylistVideos]
+  );
+
+  const copyPlaylistVideos = useCallback(
+    (
+      sourcePlaylistId: string,
+      destinationPlaylistId: string,
+      videoIds: string[]
+    ) => {
+      const source = [...importedPlaylists, ...curatedPlaylists].find(
+        (playlist) => playlist.id === sourcePlaylistId
       );
-      writeStoredPlaylists(next);
-      return next;
-    });
-
-    setState((current) => {
-      if (current.selectedPlaylist?.id !== playlistId || !updatedPlaylist) {
-        return current;
+      if (!source) {
+        return;
       }
 
-      const currentVideo = current.queue[current.currentIndex] ?? null;
-      const queue = updatedPlaylist.videos;
-      const nextIndex = currentVideo
-        ? Math.max(
-            0,
-            queue.findIndex((video) => video.id === currentVideo.id)
-          )
-        : 0;
+      const ids = new Set(videoIds);
+      const selected = source.videos.filter((video) => ids.has(video.id));
+      setCuratedPlaylists((current) => {
+        const next = current.map((playlist) => {
+          if (playlist.id !== destinationPlaylistId) {
+            return playlist;
+          }
 
-      return {
-        ...current,
-        selectedPlaylist: updatedPlaylist,
-        queue,
-        currentIndex: queue.length === 0 ? 0 : Math.min(nextIndex, queue.length - 1),
-        isPlaying: queue.length > 0 ? current.isPlaying : false
-      };
-    });
-  }, [importedPlaylists]);
+          const existing = new Set(playlist.videos.map((video) => video.id));
+          const videos = [
+            ...playlist.videos,
+            ...selected.filter((video) => !existing.has(video.id))
+          ];
+          return {
+            ...playlist,
+            thumbnailUrl: videos[0]?.thumbnailUrl ?? playlist.thumbnailUrl,
+            videoCount: videos.length,
+            videos
+          };
+        });
+        writeStoredCuratedPlaylists(next);
+        return next;
+      });
+    },
+    [curatedPlaylists, importedPlaylists]
+  );
+
+  const movePlaylistVideos = useCallback(
+    (
+      sourcePlaylistId: string,
+      destinationPlaylistId: string,
+      videoIds: string[]
+    ) => {
+      copyPlaylistVideos(sourcePlaylistId, destinationPlaylistId, videoIds);
+      removePlaylistVideos(sourcePlaylistId, videoIds);
+    },
+    [copyPlaylistVideos, removePlaylistVideos]
+  );
+
+  const updateSongMetadata = useCallback(
+    (videoId: string, metadata: SongMetadata) => {
+      setSongMetadata((current) => {
+        const next = { ...current, [videoId]: metadata };
+        writeStoredSongMetadata(next);
+        return next;
+      });
+    },
+    []
+  );
 
   const updatePlaylistVideo = useCallback((
     playlistId: string,
     videoId: string,
     updates: Partial<PlayerState["queue"][number]>
   ) => {
-    const playlist = importedPlaylists.find((item) => item.id === playlistId);
+    const playlist = [...importedPlaylists, ...curatedPlaylists].find(
+      (item) => item.id === playlistId
+    );
     if (!playlist) {
       return;
     }
@@ -145,6 +282,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       writeStoredPlaylists(next);
       return next;
     });
+    setCuratedPlaylists((current) => {
+      const next = current.map((item) =>
+        item.id === playlistId ? updatedPlaylist : item
+      );
+      writeStoredCuratedPlaylists(next);
+      return next;
+    });
 
     setState((current) => {
       if (current.selectedPlaylist?.id !== playlistId) {
@@ -159,7 +303,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         )
       };
     });
-  }, [importedPlaylists]);
+  }, [curatedPlaylists, importedPlaylists]);
 
   const setPlayback = useCallback((playing: boolean) => {
     setState((current) => ({ ...current, isPlaying: playing }));
@@ -229,19 +373,29 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const currentVideo = state.queue[state.currentIndex] ?? null;
-  const allPlaylists = useMemo(() => importedPlaylists, [importedPlaylists]);
+  const allPlaylists = useMemo(
+    () => [...curatedPlaylists, ...importedPlaylists],
+    [curatedPlaylists, importedPlaylists]
+  );
 
   const value = useMemo<PlayerContextValue>(
     () => ({
       ...state,
       importedPlaylists,
+      curatedPlaylists,
       allPlaylists,
+      songMetadata,
       currentVideo,
       playerReady,
       playlistsLoaded,
       addImportedPlaylist,
+      createCuratedPlaylist,
+      copyPlaylistVideos,
       loadPlaylist,
+      movePlaylistVideos,
+      removePlaylistVideos,
       removePlaylistVideo,
+      updateSongMetadata,
       updatePlaylistVideo,
       setPlayerReady,
       togglePlayback,
@@ -255,13 +409,20 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     [
       state,
       importedPlaylists,
+      curatedPlaylists,
       allPlaylists,
+      songMetadata,
       currentVideo,
       playerReady,
       playlistsLoaded,
       addImportedPlaylist,
+      createCuratedPlaylist,
+      copyPlaylistVideos,
       loadPlaylist,
+      movePlaylistVideos,
+      removePlaylistVideos,
       removePlaylistVideo,
+      updateSongMetadata,
       updatePlaylistVideo,
       setPlayerReady,
       togglePlayback,

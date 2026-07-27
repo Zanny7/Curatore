@@ -1,0 +1,919 @@
+"use client";
+
+import {
+  ArrowLeft,
+  CheckSquare,
+  Copy,
+  MoreHorizontal,
+  MoveRight,
+  Play,
+  Plus,
+  Star,
+  Tags,
+  Trash2,
+  X
+} from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { type FormEvent, useMemo, useState } from "react";
+import { usePlayer } from "@/context/PlayerContext";
+import type { Playlist, SongMetadata, VideoItem } from "@/types";
+
+type TransferMode = "copy" | "move";
+
+export default function PlaylistDetailPage() {
+  const router = useRouter();
+  const params = useParams<{ playlistId: string }>();
+  const {
+    allPlaylists,
+    copyPlaylistVideos,
+    createCuratedPlaylist,
+    curatedPlaylists,
+    loadPlaylist,
+    movePlaylistVideos,
+    playlistsLoaded,
+    removePlaylistVideos,
+    songMetadata,
+    updatePlaylistVideo,
+    updateSongMetadata
+  } = usePlayer();
+  const playlistId = decodeURIComponent(params.playlistId);
+  const playlist = useMemo(
+    () => allPlaylists.find((item) => item.id === playlistId) ?? null,
+    [allPlaylists, playlistId]
+  );
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [metadataVideo, setMetadataVideo] = useState<VideoItem | null>(null);
+  const [transfer, setTransfer] = useState<{
+    ids: string[];
+    mode: TransferMode;
+  } | null>(null);
+  const [removeIds, setRemoveIds] = useState<string[] | null>(null);
+
+  if (!playlistsLoaded) {
+    return <p className="text-sm text-zinc-500">Loading playlist…</p>;
+  }
+
+  if (!playlist) {
+    return (
+      <section className="mx-auto w-full max-w-5xl space-y-5">
+        <BackButton onClick={() => router.push("/playlists")} />
+        <div className="rounded-2xl border border-dashed border-zinc-300 bg-white/70 p-10 text-center dark:border-white/10 dark:bg-neutral-900/70">
+          <h1 className="text-2xl font-bold text-zinc-950 dark:text-white">
+            Playlist not found
+          </h1>
+          <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+            This playlist is no longer available in Curatore.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  const selected = Array.from(selectedIds);
+  const allSelected =
+    playlist.videos.length > 0 && selectedIds.size === playlist.videos.length;
+
+  function toggleSong(videoId: string) {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(videoId)) {
+        next.delete(videoId);
+      } else {
+        next.add(videoId);
+      }
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    setSelectedIds(
+      allSelected
+        ? new Set()
+        : new Set(playlist?.videos.map((video) => video.id) ?? [])
+    );
+  }
+
+  function playFrom(videoId?: string) {
+    if (!playlist || playlist.videos.length === 0) {
+      return;
+    }
+    loadPlaylist(playlist, videoId);
+    router.push("/player");
+  }
+
+  function finishBulkAction() {
+    setSelectedIds(new Set());
+    setTransfer(null);
+    setRemoveIds(null);
+  }
+
+  return (
+    <section className="mx-auto w-full max-w-6xl space-y-7">
+      <div>
+        <BackButton onClick={() => router.push("/playlists")} />
+        <div className="mt-5 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <img
+              alt=""
+              className="h-20 w-32 shrink-0 rounded-xl border border-zinc-200 object-cover shadow-sm dark:border-white/10 sm:h-24 sm:w-40"
+              src={playlist.thumbnailUrl}
+            />
+            <div className="min-w-0">
+              <p className="text-accent text-xs font-semibold uppercase tracking-[0.18em]">
+                {playlist.source === "imported"
+                  ? "Imported playlist"
+                  : "My playlist"}
+              </p>
+              <h1 className="mt-2 line-clamp-2 text-3xl font-bold tracking-tight text-zinc-950 dark:text-white sm:text-4xl">
+                {playlist.name}
+              </h1>
+              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                {playlist.videoCount}{" "}
+                {playlist.videoCount === 1 ? "song" : "songs"}
+              </p>
+            </div>
+          </div>
+          <button
+            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-zinc-950 px-5 font-semibold text-zinc-950 transition hover:border-accent hover:text-accent-strong disabled:opacity-40 dark:border-white dark:text-white"
+            disabled={playlist.videos.length === 0}
+            onClick={() => playFrom()}
+            type="button"
+          >
+            <Play aria-hidden="true" className="h-4 w-4" />
+            Play playlist
+          </button>
+        </div>
+      </div>
+
+      <BulkToolbar
+        allSelected={allSelected}
+        count={selected.length}
+        disabled={selected.length === 0}
+        onClear={() => setSelectedIds(new Set())}
+        onCopy={() => setTransfer({ ids: selected, mode: "copy" })}
+        onMove={() => setTransfer({ ids: selected, mode: "move" })}
+        onRemove={() => setRemoveIds(selected)}
+        onToggleAll={toggleAll}
+      />
+
+      {playlist.videos.length > 0 ? (
+        <div className="overflow-visible rounded-2xl border border-zinc-200 bg-white/85 shadow-sm backdrop-blur dark:border-white/10 dark:bg-neutral-900/85">
+          <div className="hidden grid-cols-[2.5rem_5rem_minmax(0,1fr)_7rem_10rem_2.5rem] items-center gap-3 border-b border-zinc-200 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:border-white/10 lg:grid">
+            <span />
+            <span />
+            <span>Song</span>
+            <span>Rating</span>
+            <span>Keywords</span>
+            <span />
+          </div>
+          {playlist.videos.map((video) => {
+            const metadata = songMetadata[video.id] ?? { keywords: [] };
+            const isSelected = selectedIds.has(video.id);
+            return (
+              <div
+                className={`relative flex items-center gap-3 border-b border-zinc-200 p-3 transition last:border-b-0 dark:border-white/10 ${
+                  isSelected ? "bg-accent-subtle" : "hover:bg-zinc-50/80 dark:hover:bg-white/[0.025]"
+                }`}
+                key={`${video.id}-${video.title}`}
+              >
+                <label className="flex h-10 w-8 shrink-0 cursor-pointer items-center justify-center">
+                  <input
+                    checked={isSelected}
+                    className="h-4 w-4 accent-[var(--accent)]"
+                    onChange={() => toggleSong(video.id)}
+                    type="checkbox"
+                  />
+                </label>
+                <button
+                  aria-label={`Play ${video.title}`}
+                  className="group relative h-12 w-20 shrink-0 overflow-hidden rounded-lg sm:h-14 sm:w-24"
+                  onClick={() => playFrom(video.id)}
+                  type="button"
+                >
+                  <img
+                    alt=""
+                    className="h-full w-full object-cover"
+                    src={video.thumbnailUrl}
+                  />
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
+                    <Play aria-hidden="true" className="h-5 w-5 text-white" />
+                  </span>
+                </button>
+                <div className="min-w-0 flex-1">
+                  <button
+                    className="block max-w-full text-left"
+                    onClick={() => playFrom(video.id)}
+                    type="button"
+                  >
+                    <p className="truncate text-sm font-semibold text-zinc-950 transition hover:text-accent-strong dark:text-white">
+                      {video.title}
+                    </p>
+                  </button>
+                  <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                    {video.channelTitle}
+                    {video.duration ? ` · ${video.duration}` : ""}
+                  </p>
+                </div>
+                <button
+                  aria-label={`Rate ${video.title}`}
+                  className="hidden w-24 shrink-0 items-center gap-2 rounded-lg px-2 py-2 text-sm text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5 sm:flex"
+                  onClick={() => setMetadataVideo(video)}
+                  type="button"
+                >
+                  <Star
+                    aria-hidden="true"
+                    className={`h-4 w-4 ${
+                      metadata.rating
+                        ? "fill-[var(--accent)] text-[var(--accent)]"
+                        : ""
+                    }`}
+                  />
+                  {metadata.rating ? `${metadata.rating}/10` : "Unrated"}
+                </button>
+                <button
+                  className="hidden w-40 shrink-0 items-center gap-2 overflow-hidden rounded-lg px-2 py-2 text-left text-xs text-zinc-500 transition hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-white/5 lg:flex"
+                  onClick={() => setMetadataVideo(video)}
+                  type="button"
+                >
+                  <Tags aria-hidden="true" className="h-4 w-4 shrink-0" />
+                  <span className="truncate">
+                    {metadata.keywords.length > 0
+                      ? metadata.keywords
+                          .slice(0, 2)
+                          .map((keyword) => `${keyword.name} ${keyword.rating}`)
+                          .join(" · ")
+                      : "Add keywords"}
+                  </span>
+                </button>
+                <div className="relative shrink-0">
+                  <button
+                    aria-label={`More actions for ${video.title}`}
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white"
+                    onClick={() =>
+                      setOpenMenuId((current) =>
+                        current === video.id ? null : video.id
+                      )
+                    }
+                    type="button"
+                  >
+                    <MoreHorizontal aria-hidden="true" className="h-5 w-5" />
+                  </button>
+                  {openMenuId === video.id ? (
+                    <SongMenu
+                      metadata={metadata}
+                      onClose={() => setOpenMenuId(null)}
+                      onCopy={() => {
+                        setTransfer({ ids: [video.id], mode: "copy" });
+                        setOpenMenuId(null);
+                      }}
+                      onEdit={() => {
+                        setMetadataVideo(video);
+                        setOpenMenuId(null);
+                      }}
+                      onMove={() => {
+                        setTransfer({ ids: [video.id], mode: "move" });
+                        setOpenMenuId(null);
+                      }}
+                      onRemove={() => {
+                        setRemoveIds([video.id]);
+                        setOpenMenuId(null);
+                      }}
+                      onTrim={(updates) =>
+                        updatePlaylistVideo(playlist.id, video.id, updates)
+                      }
+                      video={video}
+                    />
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-dashed border-zinc-300 bg-white/60 p-10 text-center dark:border-white/10 dark:bg-neutral-900/60">
+          <h2 className="text-xl font-bold text-zinc-950 dark:text-white">
+            This playlist is empty
+          </h2>
+          <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+            Copy songs here from one of your imported playlists.
+          </p>
+        </div>
+      )}
+
+      {metadataVideo ? (
+        <MetadataDialog
+          initial={songMetadata[metadataVideo.id] ?? { keywords: [] }}
+          onClose={() => setMetadataVideo(null)}
+          onSave={(metadata) => {
+            updateSongMetadata(metadataVideo.id, metadata);
+            setMetadataVideo(null);
+          }}
+          title={metadataVideo.title}
+        />
+      ) : null}
+
+      {transfer ? (
+        <TransferDialog
+          count={transfer.ids.length}
+          destinations={curatedPlaylists.filter(
+            (item) => item.id !== playlist.id
+          )}
+          mode={transfer.mode}
+          onClose={() => setTransfer(null)}
+          onCreate={(name) => createCuratedPlaylist(name)}
+          onSubmit={(destinationId) => {
+            if (transfer.mode === "copy") {
+              copyPlaylistVideos(playlist.id, destinationId, transfer.ids);
+            } else {
+              movePlaylistVideos(playlist.id, destinationId, transfer.ids);
+            }
+            finishBulkAction();
+          }}
+        />
+      ) : null}
+
+      {removeIds ? (
+        <ConfirmRemoveDialog
+          count={removeIds.length}
+          onCancel={() => setRemoveIds(null)}
+          onConfirm={() => {
+            removePlaylistVideos(playlist.id, removeIds);
+            finishBulkAction();
+          }}
+        />
+      ) : null}
+    </section>
+  );
+}
+
+function BackButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-600 transition hover:text-accent-strong dark:text-zinc-300"
+      onClick={onClick}
+      type="button"
+    >
+      <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+      Back to playlists
+    </button>
+  );
+}
+
+function BulkToolbar({
+  allSelected,
+  count,
+  disabled,
+  onClear,
+  onCopy,
+  onMove,
+  onRemove,
+  onToggleAll
+}: {
+  allSelected: boolean;
+  count: number;
+  disabled: boolean;
+  onClear: () => void;
+  onCopy: () => void;
+  onMove: () => void;
+  onRemove: () => void;
+  onToggleAll: () => void;
+}) {
+  return (
+    <div className="sticky top-16 z-20 flex flex-wrap items-center gap-2 rounded-xl border border-zinc-200 bg-white/95 p-2.5 shadow-lg backdrop-blur dark:border-white/10 dark:bg-neutral-950/95 lg:top-3">
+      <button
+        className="inline-flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-white/5"
+        onClick={onToggleAll}
+        type="button"
+      >
+        <CheckSquare aria-hidden="true" className="h-4 w-4" />
+        {allSelected ? "Deselect all" : "Select all"}
+      </button>
+      <span className="mr-auto text-xs font-medium text-zinc-400">
+        {count > 0 ? `${count} selected` : "Select songs to manage"}
+      </span>
+      <ToolbarButton disabled={disabled} icon={Copy} label="Copy" onClick={onCopy} />
+      <ToolbarButton
+        disabled={disabled}
+        icon={MoveRight}
+        label="Move"
+        onClick={onMove}
+      />
+      <ToolbarButton
+        danger
+        disabled={disabled}
+        icon={Trash2}
+        label="Remove"
+        onClick={onRemove}
+      />
+      <button
+        className="h-10 rounded-lg px-3 text-sm text-zinc-500 transition hover:text-zinc-950 disabled:opacity-30 dark:hover:text-white"
+        disabled={disabled}
+        onClick={onClear}
+        type="button"
+      >
+        Clear
+      </button>
+    </div>
+  );
+}
+
+function ToolbarButton({
+  danger = false,
+  disabled,
+  icon: Icon,
+  label,
+  onClick
+}: {
+  danger?: boolean;
+  disabled: boolean;
+  icon: typeof Copy;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={`inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-30 ${
+        danger
+          ? "border-red-500/30 text-red-500 hover:bg-red-500/10"
+          : "border-zinc-200 text-zinc-700 hover:border-accent hover:text-accent-strong dark:border-white/10 dark:text-zinc-200"
+      }`}
+      disabled={disabled}
+      onClick={onClick}
+      type="button"
+    >
+      <Icon aria-hidden="true" className="h-4 w-4" />
+      <span className="hidden sm:inline">{label}</span>
+    </button>
+  );
+}
+
+function SongMenu({
+  metadata,
+  onClose,
+  onCopy,
+  onEdit,
+  onMove,
+  onRemove,
+  onTrim,
+  video
+}: {
+  metadata: SongMetadata;
+  onClose: () => void;
+  onCopy: () => void;
+  onEdit: () => void;
+  onMove: () => void;
+  onRemove: () => void;
+  onTrim: (updates: Partial<VideoItem>) => void;
+  video: VideoItem;
+}) {
+  return (
+    <div className="absolute right-0 top-11 z-30 w-72 rounded-xl border border-zinc-200 bg-white p-2 shadow-2xl dark:border-white/10 dark:bg-neutral-950">
+      <button
+        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-700 transition hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-white/5"
+        onClick={onEdit}
+        type="button"
+      >
+        <Star aria-hidden="true" className="h-4 w-4" />
+        Rating & keywords
+        {metadata.rating ? (
+          <span className="ml-auto text-xs text-zinc-400">
+            {metadata.rating}/10
+          </span>
+        ) : null}
+      </button>
+      <button
+        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-700 transition hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-white/5"
+        onClick={onCopy}
+        type="button"
+      >
+        <Copy aria-hidden="true" className="h-4 w-4" />
+        Copy to playlist
+      </button>
+      <button
+        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-700 transition hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-white/5"
+        onClick={onMove}
+        type="button"
+      >
+        <MoveRight aria-hidden="true" className="h-4 w-4" />
+        Move to playlist
+      </button>
+      <div className="my-1 border-t border-zinc-200 px-3 py-2 dark:border-white/10">
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+          Playback trim
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <TrimField
+            label="Start"
+            onChange={(startSeconds) => onTrim({ startSeconds })}
+            value={video.startSeconds}
+          />
+          <TrimField
+            label="End"
+            onChange={(endSeconds) => onTrim({ endSeconds })}
+            value={video.endSeconds}
+          />
+        </div>
+      </div>
+      <button
+        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-red-500 transition hover:bg-red-500/10"
+        onClick={onRemove}
+        type="button"
+      >
+        <Trash2 aria-hidden="true" className="h-4 w-4" />
+        Remove from this playlist
+      </button>
+      <button
+        aria-label="Close song menu"
+        className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow dark:border-white/10 dark:bg-neutral-900"
+        onClick={onClose}
+        type="button"
+      >
+        <X aria-hidden="true" className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function TrimField({
+  label,
+  onChange,
+  value
+}: {
+  label: string;
+  onChange: (value: number | undefined) => void;
+  value?: number;
+}) {
+  return (
+    <label>
+      <span className="sr-only">{label}</span>
+      <input
+        className="h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 text-xs outline-none focus:border-accent dark:border-white/10 dark:bg-neutral-900"
+        defaultValue={formatTime(value)}
+        onBlur={(event) => onChange(parseTime(event.target.value))}
+        placeholder={`${label} 0:00`}
+      />
+    </label>
+  );
+}
+
+function MetadataDialog({
+  initial,
+  onClose,
+  onSave,
+  title
+}: {
+  initial: SongMetadata;
+  onClose: () => void;
+  onSave: (metadata: SongMetadata) => void;
+  title: string;
+}) {
+  const [rating, setRating] = useState(initial.rating);
+  const [keywords, setKeywords] = useState(initial.keywords);
+
+  return (
+    <Modal onClose={onClose}>
+      <p className="text-accent text-xs font-semibold uppercase tracking-[0.18em]">
+        Song details
+      </p>
+      <h2 className="mt-2 truncate text-2xl font-bold text-white">{title}</h2>
+      <div className="mt-6">
+        <p className="text-sm font-semibold text-zinc-200">Overall rating</p>
+        <div className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-10">
+          {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => (
+            <button
+              aria-pressed={rating === value}
+              className={`h-9 rounded-lg border text-sm font-semibold transition ${
+                rating === value
+                  ? "border-[var(--accent)] bg-[var(--accent)] text-black"
+                  : "border-white/10 text-zinc-400 hover:border-[var(--accent)] hover:text-white"
+              }`}
+              key={value}
+              onClick={() => setRating(value)}
+              type="button"
+            >
+              {value}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="mt-7">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-zinc-200">Keywords</p>
+          <button
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-400 transition hover:text-accent-strong"
+            onClick={() =>
+              setKeywords((current) => [
+                ...current,
+                { name: "", rating: 5 }
+              ])
+            }
+            type="button"
+          >
+            <Plus aria-hidden="true" className="h-4 w-4" />
+            Add keyword
+          </button>
+        </div>
+        <div className="mt-3 max-h-64 space-y-2 overflow-y-auto">
+          {keywords.length > 0 ? (
+            keywords.map((keyword, index) => (
+              <div
+                className="grid grid-cols-[minmax(0,1fr)_5rem_2rem] gap-2"
+                key={`${index}-${keyword.name}`}
+              >
+                <input
+                  aria-label="Keyword"
+                  className="h-10 rounded-lg border border-white/10 bg-neutral-900 px-3 text-sm text-white outline-none focus:border-accent"
+                  onChange={(event) =>
+                    setKeywords((current) =>
+                      current.map((item, itemIndex) =>
+                        itemIndex === index
+                          ? { ...item, name: event.target.value }
+                          : item
+                      )
+                    )
+                  }
+                  placeholder="Party"
+                  value={keyword.name}
+                />
+                <select
+                  aria-label={`Match for ${keyword.name || "keyword"}`}
+                  className="h-10 rounded-lg border border-white/10 bg-neutral-900 px-2 text-sm text-white outline-none focus:border-accent"
+                  onChange={(event) =>
+                    setKeywords((current) =>
+                      current.map((item, itemIndex) =>
+                        itemIndex === index
+                          ? { ...item, rating: Number(event.target.value) }
+                          : item
+                      )
+                    )
+                  }
+                  value={keyword.rating}
+                >
+                  {Array.from({ length: 10 }, (_, item) => item + 1).map(
+                    (value) => (
+                      <option key={value} value={value}>
+                        {value}/10
+                      </option>
+                    )
+                  )}
+                </select>
+                <button
+                  aria-label={`Remove ${keyword.name || "keyword"}`}
+                  className="flex h-10 items-center justify-center text-zinc-500 transition hover:text-red-400"
+                  onClick={() =>
+                    setKeywords((current) =>
+                      current.filter((_, itemIndex) => itemIndex !== index)
+                    )
+                  }
+                  type="button"
+                >
+                  <X aria-hidden="true" className="h-4 w-4" />
+                </button>
+              </div>
+            ))
+          ) : (
+            <p className="rounded-lg border border-dashed border-white/10 px-4 py-5 text-center text-sm text-zinc-500">
+              Add keywords such as Party, Focus, or Chill and rate the match.
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="mt-7 flex gap-3">
+        <button
+          className="h-11 flex-1 rounded-xl border border-white/10 text-sm font-semibold text-zinc-300"
+          onClick={onClose}
+          type="button"
+        >
+          Cancel
+        </button>
+        <button
+          className="h-11 flex-1 rounded-xl bg-white text-sm font-semibold text-zinc-950 transition hover:bg-[var(--accent)]"
+          onClick={() =>
+            onSave({
+              rating,
+              keywords: keywords
+                .filter((keyword) => keyword.name.trim())
+                .map((keyword) => ({
+                  name: keyword.name.trim(),
+                  rating: keyword.rating
+                }))
+            })
+          }
+          type="button"
+        >
+          Save details
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function TransferDialog({
+  count,
+  destinations,
+  mode,
+  onClose,
+  onCreate,
+  onSubmit
+}: {
+  count: number;
+  destinations: Playlist[];
+  mode: TransferMode;
+  onClose: () => void;
+  onCreate: (name: string) => Playlist;
+  onSubmit: (destinationId: string) => void;
+}) {
+  const [selectedId, setSelectedId] = useState<string | null>(
+    destinations[0]?.id ?? null
+  );
+  const [newName, setNewName] = useState("");
+
+  function createAndSelect(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!newName.trim()) {
+      return;
+    }
+    const playlist = onCreate(newName);
+    setSelectedId(playlist.id);
+    setNewName("");
+  }
+
+  return (
+    <Modal onClose={onClose}>
+      <p className="text-accent text-xs font-semibold uppercase tracking-[0.18em]">
+        {mode === "copy" ? "Copy songs" : "Move songs"}
+      </p>
+      <h2 className="mt-2 text-2xl font-bold text-white">
+        Choose a destination
+      </h2>
+      <p className="mt-2 text-sm text-zinc-400">
+        {count} {count === 1 ? "song" : "songs"} selected
+      </p>
+      <div className="mt-5 max-h-52 space-y-2 overflow-y-auto">
+        {destinations.map((playlist) => (
+          <label
+            className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
+              selectedId === playlist.id
+                ? "border-[var(--accent)] bg-[var(--accent-subtle)]"
+                : "border-white/10 hover:bg-white/5"
+            }`}
+            key={playlist.id}
+          >
+            <input
+              checked={selectedId === playlist.id}
+              className="accent-[var(--accent)]"
+              name="destination"
+              onChange={() => setSelectedId(playlist.id)}
+              type="radio"
+            />
+            <img
+              alt=""
+              className="h-10 w-16 rounded-md object-cover"
+              src={playlist.thumbnailUrl}
+            />
+            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">
+              {playlist.name}
+            </span>
+            <span className="text-xs text-zinc-500">
+              {playlist.videoCount}
+            </span>
+          </label>
+        ))}
+      </div>
+      <form
+        className="mt-4 flex gap-2 border-t border-white/10 pt-4"
+        onSubmit={createAndSelect}
+      >
+        <input
+          className="h-10 min-w-0 flex-1 rounded-lg border border-white/10 bg-neutral-900 px-3 text-sm text-white outline-none focus:border-accent"
+          onChange={(event) => setNewName(event.target.value)}
+          placeholder="Create a new playlist"
+          value={newName}
+        />
+        <button
+          className="h-10 rounded-lg border border-white/10 px-3 text-sm font-semibold text-zinc-300 transition hover:border-accent hover:text-accent-strong"
+          type="submit"
+        >
+          Create
+        </button>
+      </form>
+      <div className="mt-6 flex gap-3">
+        <button
+          className="h-11 flex-1 rounded-xl border border-white/10 text-sm font-semibold text-zinc-300"
+          onClick={onClose}
+          type="button"
+        >
+          Cancel
+        </button>
+        <button
+          className="h-11 flex-1 rounded-xl bg-white text-sm font-semibold text-zinc-950 transition hover:bg-[var(--accent)] disabled:opacity-40"
+          disabled={!selectedId}
+          onClick={() => selectedId && onSubmit(selectedId)}
+          type="button"
+        >
+          {mode === "copy" ? "Copy here" : "Move here"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function ConfirmRemoveDialog({
+  count,
+  onCancel,
+  onConfirm
+}: {
+  count: number;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Modal onClose={onCancel}>
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-400">
+        Remove from playlist
+      </p>
+      <h2 className="mt-2 text-2xl font-bold text-white">
+        Remove {count} {count === 1 ? "song" : "songs"}?
+      </h2>
+      <p className="mt-3 text-sm leading-6 text-zinc-400">
+        This only removes the selected songs from this playlist. Ratings,
+        keywords, and copies in other playlists remain untouched.
+      </p>
+      <div className="mt-7 flex gap-3">
+        <button
+          className="h-11 flex-1 rounded-xl border border-white/10 text-sm font-semibold text-zinc-300"
+          onClick={onCancel}
+          type="button"
+        >
+          Cancel
+        </button>
+        <button
+          className="h-11 flex-1 rounded-xl bg-red-500 text-sm font-semibold text-white transition hover:bg-red-400"
+          onClick={onConfirm}
+          type="button"
+        >
+          Remove
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function Modal({
+  children,
+  onClose
+}: {
+  children: React.ReactNode;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+      role="presentation"
+    >
+      <div
+        aria-modal="true"
+        className="relative w-full max-w-lg rounded-2xl border border-white/10 bg-neutral-950 p-6 shadow-2xl"
+        role="dialog"
+      >
+        <button
+          aria-label="Close"
+          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 transition hover:bg-white/5 hover:text-white"
+          onClick={onClose}
+          type="button"
+        >
+          <X aria-hidden="true" className="h-5 w-5" />
+        </button>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function parseTime(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  const parts = trimmed.split(":").map(Number);
+  if (parts.some((part) => !Number.isFinite(part) || part < 0)) {
+    return undefined;
+  }
+  if (parts.length === 1) {
+    return Math.floor(parts[0]);
+  }
+  if (parts.length === 2 && parts[1] < 60) {
+    return Math.floor(parts[0] * 60 + parts[1]);
+  }
+  return undefined;
+}
+
+function formatTime(value?: number) {
+  if (value === undefined) {
+    return "";
+  }
+  const minutes = Math.floor(value / 60);
+  const seconds = value % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}

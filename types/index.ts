@@ -32,13 +32,23 @@ export type VideoItem = {
   endSeconds?: number;
 };
 
+export type KeywordRating = {
+  name: string;
+  rating: number;
+};
+
+export type SongMetadata = {
+  rating?: number;
+  keywords: KeywordRating[];
+};
+
 export type Playlist = {
   id: string;
   name: string;
-  url: string;
+  url?: string;
   thumbnailUrl: string;
   videoCount: number;
-  source: "imported";
+  source: "curated" | "imported";
   videos: VideoItem[];
 };
 
