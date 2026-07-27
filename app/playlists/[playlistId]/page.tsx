@@ -433,11 +433,12 @@ export default function PlaylistDetailPage() {
               label="Song"
               onClick={() => toggleSort("song")}
             />
-            <FrequencySortControl
+            <SortButton
               active={sort?.key === "frequency"}
               direction={
                 sort?.key === "frequency" ? sort.direction : undefined
               }
+              label="Freq"
               onClick={() => toggleSort("frequency")}
             />
             <SortButton
@@ -456,6 +457,7 @@ export default function PlaylistDetailPage() {
               selectedTag={selectedSortTag}
               tags={playlistTags}
             />
+            <SortingHelpLink />
           </div>
           <div className="hidden grid-cols-[1.25rem_2rem_6rem_minmax(0,1fr)_6rem_6rem_10rem_2.5rem] items-center gap-3 border-b border-zinc-200 px-3 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:border-white/10 2xl:grid">
             <span />
@@ -468,11 +470,13 @@ export default function PlaylistDetailPage() {
               label="Song"
               onClick={() => toggleSort("song")}
             />
-            <FrequencySortControl
+            <SortButton
               active={sort?.key === "frequency"}
+              className="pl-2"
               direction={
                 sort?.key === "frequency" ? sort.direction : undefined
               }
+              label="Freq"
               onClick={() => toggleSort("frequency")}
             />
             <SortButton
@@ -493,7 +497,7 @@ export default function PlaylistDetailPage() {
               selectedTag={selectedSortTag}
               tags={playlistTags}
             />
-            <span />
+            <SortingHelpLink />
           </div>
           {displayedVideos.map((video, index) => {
             const metadata = songMetadata[video.id] ?? { keywords: [] };
@@ -867,32 +871,16 @@ function BackButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-function FrequencySortControl({
-  active,
-  direction,
-  onClick
-}: {
-  active: boolean;
-  direction?: SortDirection;
-  onClick: () => void;
-}) {
+function SortingHelpLink() {
   return (
-    <div className="flex items-center gap-0.5">
-      <Link
-        aria-label="Learn how play frequency works"
-        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-zinc-400 transition hover:bg-zinc-100 hover:text-accent-strong dark:hover:bg-white/5"
-        href="/help#frequency"
-        title="Learn how play frequency works"
-      >
-        <Info aria-hidden="true" className="h-3.5 w-3.5" />
-      </Link>
-      <SortButton
-        active={active}
-        direction={direction}
-        label="Freq"
-        onClick={onClick}
-      />
-    </div>
+    <Link
+      aria-label="Learn how playlist sorting works"
+      className="flex h-6 w-6 shrink-0 items-center justify-center justify-self-center rounded-full text-zinc-400 transition hover:bg-zinc-100 hover:text-accent-strong dark:hover:bg-white/5"
+      href="/help/playlist-sorting"
+      title="Learn how playlist sorting works"
+    >
+      <Info aria-hidden="true" className="h-3.5 w-3.5" />
+    </Link>
   );
 }
 
