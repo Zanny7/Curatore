@@ -314,11 +314,27 @@ export default function PlaylistDetailPage() {
         <BackButton onClick={() => router.push("/playlists")} />
         <div className="mt-5 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex min-w-0 items-center gap-4">
-            <img
-              alt=""
-              className="h-20 w-32 shrink-0 rounded-xl border border-zinc-200 object-cover shadow-sm dark:border-white/10 sm:h-24 sm:w-40"
-              src={playlist.thumbnailUrl}
-            />
+            <button
+              aria-label={`Play ${playlist.name}`}
+              className="group relative h-20 w-32 shrink-0 overflow-hidden rounded-xl border border-zinc-200 shadow-sm transition focus:outline-none focus-visible:border-accent focus-visible:ring-4 focus-visible:ring-[var(--accent-ring)] disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 sm:h-24 sm:w-40"
+              disabled={playlist.videos.length === 0}
+              onClick={() => playFrom()}
+              type="button"
+            >
+              <img
+                alt=""
+                className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                src={playlist.thumbnailUrl}
+              />
+              <span className="absolute inset-0 flex items-center justify-center bg-black/20 transition group-hover:bg-black/35">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-black/55 text-white shadow-lg transition group-hover:scale-105 group-hover:bg-black/70">
+                  <Play
+                    aria-hidden="true"
+                    className="ml-0.5 h-5 w-5 fill-current"
+                  />
+                </span>
+              </span>
+            </button>
             <div className="min-w-0">
               <p className="text-accent text-xs font-semibold uppercase tracking-[0.18em]">
                 {playlist.source === "imported"
@@ -364,15 +380,6 @@ export default function PlaylistDetailPage() {
               type="button"
             >
               <Trash2 aria-hidden="true" className="h-4 w-4" />
-            </button>
-            <button
-              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-zinc-950 px-5 font-semibold text-zinc-950 transition hover:border-accent hover:text-accent-strong disabled:opacity-40 dark:border-white dark:text-white"
-              disabled={playlist.videos.length === 0}
-              onClick={() => playFrom()}
-              type="button"
-            >
-              <Play aria-hidden="true" className="h-4 w-4" />
-              Play playlist
             </button>
           </div>
         </div>
@@ -821,7 +828,7 @@ export default function PlaylistDetailPage() {
 
       {undoRemoval ? (
         <div
-          className="fixed bottom-24 left-1/2 z-[90] flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center gap-4 rounded-xl border border-white/10 bg-neutral-950 px-4 py-3 text-sm text-zinc-200 shadow-2xl"
+          className="fixed bottom-24 left-1/2 z-[90] flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center gap-4 rounded-xl border border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] px-4 py-3 text-sm text-zinc-200 shadow-2xl backdrop-blur-xl"
           role="status"
         >
           <span className="min-w-0 flex-1">
@@ -1126,7 +1133,7 @@ function BulkToolbar({
   onToggleAll: () => void;
 }) {
   return (
-    <div className="sticky top-16 z-20 flex flex-wrap items-center gap-2 rounded-xl border border-zinc-200 bg-white/95 p-2.5 shadow-lg backdrop-blur dark:border-white/10 dark:bg-neutral-950/95 lg:top-3">
+    <div className="sticky top-16 z-20 flex flex-wrap items-center gap-2 rounded-xl border border-zinc-200 bg-white/95 p-2.5 shadow-lg backdrop-blur dark:border-[var(--app-sidebar-border)] dark:bg-[var(--app-control-bg)] lg:top-3">
       <button
         className="inline-flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-white/5"
         onClick={onToggleAll}
@@ -1221,7 +1228,7 @@ function SongMenu({
   video: VideoItem;
 }) {
   return (
-    <div className="absolute right-0 top-11 z-30 w-72 rounded-xl border border-zinc-200 bg-white p-2 shadow-2xl dark:border-white/10 dark:bg-neutral-950">
+    <div className="absolute right-0 top-11 z-30 w-72 rounded-xl border border-zinc-200 bg-white p-2 shadow-2xl dark:border-[var(--app-sidebar-border)] dark:bg-[var(--app-control-bg)] dark:backdrop-blur-xl">
       <button
         className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-700 transition hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-white/5"
         onClick={onCopy}
@@ -1266,7 +1273,7 @@ function SongMenu({
       </button>
       <button
         aria-label="Close song menu"
-        className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow dark:border-white/10 dark:bg-neutral-900"
+        className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow dark:border-[var(--app-sidebar-border)] dark:bg-[var(--app-control-bg)]"
         onClick={onClose}
         type="button"
       >
@@ -1291,7 +1298,7 @@ function TrimField({
         {label}
       </span>
       <input
-        className="h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 text-xs outline-none focus:border-accent dark:border-white/10 dark:bg-neutral-900"
+        className="h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 text-xs outline-none focus:border-accent dark:border-[var(--app-sidebar-border)] dark:bg-white/5"
         defaultValue={formatTime(value)}
         onBlur={(event) => onChange(parseTime(event.target.value))}
         placeholder="00:00"
@@ -1575,7 +1582,7 @@ function TransferDialog({
             className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
               selectedId === playlist.id
                 ? "border-[var(--accent)] bg-[var(--accent-subtle)]"
-                : "border-white/10 hover:bg-white/5"
+                : "border-[var(--app-sidebar-border)] hover:bg-white/5"
             }`}
             key={playlist.id}
           >
@@ -1601,17 +1608,17 @@ function TransferDialog({
         ))}
       </div>
       <form
-        className="mt-4 flex gap-2 border-t border-white/10 pt-4"
+        className="mt-4 flex gap-2 border-t border-[var(--app-sidebar-border)] pt-4"
         onSubmit={createAndSelect}
       >
         <input
-          className="h-10 min-w-0 flex-1 rounded-lg border border-white/10 bg-neutral-900 px-3 text-sm text-white outline-none focus:border-accent"
+          className="h-10 min-w-0 flex-1 rounded-lg border border-[var(--app-sidebar-border)] bg-white/5 px-3 text-sm text-white outline-none focus:border-accent"
           onChange={(event) => setNewName(event.target.value)}
           placeholder="Create a new playlist"
           value={newName}
         />
         <button
-          className="h-10 rounded-lg border border-white/10 px-3 text-sm font-semibold text-zinc-300 transition hover:border-accent hover:text-accent-strong"
+          className="h-10 rounded-lg border border-[var(--app-sidebar-border)] px-3 text-sm font-semibold text-zinc-300 transition hover:border-accent hover:bg-white/5 hover:text-accent-strong"
           type="submit"
         >
           Create
@@ -1619,14 +1626,14 @@ function TransferDialog({
       </form>
       <div className="mt-6 flex gap-3">
         <button
-          className="h-11 flex-1 rounded-xl border border-white/10 text-sm font-semibold text-zinc-300"
+          className="h-11 flex-1 rounded-xl border border-[var(--app-sidebar-border)] text-sm font-semibold text-zinc-300 transition hover:bg-white/5"
           onClick={onClose}
           type="button"
         >
           Cancel
         </button>
         <button
-          className="h-11 flex-1 rounded-xl bg-white text-sm font-semibold text-zinc-950 transition hover:bg-[var(--accent)] disabled:opacity-40"
+          className="h-11 flex-1 rounded-xl border border-[var(--accent)] bg-accent-soft text-sm font-semibold text-accent-strong transition hover:bg-[var(--accent)] hover:text-black disabled:opacity-40"
           disabled={!selectedId}
           onClick={() => selectedId && onSubmit(selectedId)}
           type="button"
@@ -1692,13 +1699,13 @@ function BulkMetadataDialog({
           value={frequency}
         />
       </div>
-      <div className="mt-5 rounded-xl border border-white/10 p-4">
+      <div className="mt-5 rounded-xl border border-[var(--app-sidebar-border)] bg-white/[0.025] p-4">
         <p className="text-sm font-semibold text-zinc-200">
           Add the same tag
         </p>
         <div className="mt-3 grid grid-cols-[minmax(0,1fr)_6rem] gap-2">
           <input
-            className="h-10 rounded-lg border border-white/10 bg-neutral-900 px-3 text-sm text-white outline-none focus:border-accent"
+            className="h-10 rounded-lg border border-[var(--app-sidebar-border)] bg-white/5 px-3 text-sm text-white outline-none focus:border-accent"
             list="curatore-bulk-tag-suggestions"
             maxLength={12}
             onChange={(event) => setTagName(event.target.value.slice(0, 12))}
@@ -1707,7 +1714,7 @@ function BulkMetadataDialog({
           />
           <select
             aria-label="Tag match"
-            className="h-10 rounded-lg border border-white/10 bg-neutral-900 px-2 text-sm text-white outline-none focus:border-accent"
+            className="h-10 rounded-lg border border-[var(--app-sidebar-border)] bg-white/5 px-2 text-sm text-white outline-none focus:border-accent"
             onChange={(event) => setTagRating(Number(event.target.value))}
             value={tagRating}
           >
@@ -1728,14 +1735,14 @@ function BulkMetadataDialog({
       </div>
       <div className="mt-7 flex gap-3">
         <button
-          className="h-11 flex-1 rounded-xl border border-white/10 text-sm font-semibold text-zinc-300"
+          className="h-11 flex-1 rounded-xl border border-[var(--app-sidebar-border)] text-sm font-semibold text-zinc-300 transition hover:bg-white/5"
           onClick={onClose}
           type="button"
         >
           Cancel
         </button>
         <button
-          className="h-11 flex-1 rounded-xl bg-white text-sm font-semibold text-zinc-950 transition hover:bg-[var(--accent)] disabled:opacity-40"
+          className="h-11 flex-1 rounded-xl border border-[var(--accent)] bg-accent-soft text-sm font-semibold text-accent-strong transition hover:bg-[var(--accent)] hover:text-black disabled:opacity-40"
           disabled={!hasChanges}
           onClick={() =>
             onSave({
@@ -1772,7 +1779,7 @@ function SelectField({
     <label className="space-y-2">
       <span className="text-sm font-semibold text-zinc-200">{label}</span>
       <select
-        className="h-11 w-full rounded-lg border border-white/10 bg-neutral-900 px-3 text-sm text-white outline-none focus:border-accent"
+        className="h-11 w-full rounded-lg border border-[var(--app-sidebar-border)] bg-white/5 px-3 text-sm text-white outline-none focus:border-accent"
         onChange={(event) => onChange(event.target.value)}
         value={value}
       >
@@ -1810,21 +1817,21 @@ function RenamePlaylistDialog({
         </span>
         <input
           autoFocus
-          className="h-11 w-full rounded-lg border border-white/10 bg-neutral-900 px-3 text-white outline-none focus:border-accent"
+          className="h-11 w-full rounded-lg border border-[var(--app-sidebar-border)] bg-white/5 px-3 text-white outline-none focus:border-accent"
           onChange={(event) => setName(event.target.value)}
           value={name}
         />
       </label>
       <div className="mt-7 flex gap-3">
         <button
-          className="h-11 flex-1 rounded-xl border border-white/10 text-sm font-semibold text-zinc-300"
+          className="h-11 flex-1 rounded-xl border border-[var(--app-sidebar-border)] text-sm font-semibold text-zinc-300 transition hover:bg-white/5"
           onClick={onCancel}
           type="button"
         >
           Cancel
         </button>
         <button
-          className="h-11 flex-1 rounded-xl bg-white text-sm font-semibold text-zinc-950 transition hover:bg-[var(--accent)] disabled:opacity-40"
+          className="h-11 flex-1 rounded-xl border border-[var(--accent)] bg-accent-soft text-sm font-semibold text-accent-strong transition hover:bg-[var(--accent)] hover:text-black disabled:opacity-40"
           disabled={!name.trim() || name.trim() === initialName}
           onClick={() => onConfirm(name)}
           type="button"
@@ -1860,7 +1867,7 @@ function DeletePlaylistDialog({
       </p>
       <div className="mt-7 flex gap-3">
         <button
-          className="h-11 flex-1 rounded-xl border border-white/10 text-sm font-semibold text-zinc-300"
+          className="h-11 flex-1 rounded-xl border border-[var(--app-sidebar-border)] text-sm font-semibold text-zinc-300 transition hover:bg-white/5"
           onClick={onCancel}
           type="button"
         >
@@ -1901,7 +1908,7 @@ function ConfirmRemoveDialog({
       </p>
       <div className="mt-7 flex gap-3">
         <button
-          className="h-11 flex-1 rounded-xl border border-white/10 text-sm font-semibold text-zinc-300"
+          className="h-11 flex-1 rounded-xl border border-[var(--app-sidebar-border)] text-sm font-semibold text-zinc-300 transition hover:bg-white/5"
           onClick={onCancel}
           type="button"
         >
@@ -1933,7 +1940,7 @@ function Modal({
     >
       <div
         aria-modal="true"
-        className="relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-neutral-950 p-6 shadow-2xl"
+        className="relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] p-6 shadow-2xl backdrop-blur-xl"
         role="dialog"
       >
         <button
