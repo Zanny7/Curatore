@@ -1,4 +1,10 @@
-import { ArrowDownUp, Info, Repeat2, Tags } from "lucide-react";
+import {
+  ArrowDownUp,
+  ChevronDown,
+  Info,
+  Repeat2,
+  Tags
+} from "lucide-react";
 import Link from "next/link";
 
 export default function PlaylistSortingHelpPage() {
@@ -20,7 +26,7 @@ export default function PlaylistSortingHelpPage() {
         </p>
       </header>
 
-      <div className="space-y-5">
+      <div className="space-y-3">
         <HelpSection
           icon={<ArrowDownUp aria-hidden="true" className="h-5 w-5" />}
           title="Sorting a playlist"
@@ -35,22 +41,6 @@ export default function PlaylistSortingHelpPage() {
             Sorting changes only the order you see. It does not remove songs
             or permanently rewrite the playlist&apos;s manual order. Manual
             drag-and-drop ordering is paused while a sorted view is active.
-          </p>
-        </HelpSection>
-
-        <HelpSection
-          icon={<Tags aria-hidden="true" className="h-5 w-5" />}
-          title="Sorting by a tag"
-        >
-          <p>
-            Use the small picker beside <strong>Tags</strong> to choose a tag,
-            then select Tags to alternate between its lowest and highest match
-            ratings. Songs without the selected tag remain at the end.
-          </p>
-          <p>
-            The selected tag is highlighted on each matching song. Choose{" "}
-            <strong>-</strong> in the picker to clear tag sorting and return
-            every tag pill to its neutral color.
           </p>
         </HelpSection>
 
@@ -87,6 +77,22 @@ export default function PlaylistSortingHelpPage() {
             Curatore builds the playback cycle.
           </p>
         </HelpSection>
+
+        <HelpSection
+          icon={<Tags aria-hidden="true" className="h-5 w-5" />}
+          title="Sorting by a tag"
+        >
+          <p>
+            Use the small picker beside <strong>Tags</strong> to choose a tag,
+            then select Tags to alternate between its lowest and highest match
+            ratings. Songs without the selected tag remain at the end.
+          </p>
+          <p>
+            The selected tag is highlighted on each matching song. Choose{" "}
+            <strong>-</strong> in the picker to clear tag sorting and return
+            every tag pill to its neutral color.
+          </p>
+        </HelpSection>
       </div>
     </section>
   );
@@ -102,18 +108,24 @@ function HelpSection({
   title: string;
 }) {
   return (
-    <article className="rounded-2xl border border-zinc-200 bg-white/90 p-5 shadow-sm backdrop-blur dark:border-[var(--app-sidebar-border)] dark:bg-[var(--app-control-bg)] sm:p-7">
-      <div className="flex items-center gap-3">
+    <details className="group rounded-2xl border border-zinc-200 bg-white/90 shadow-sm backdrop-blur transition open:border-zinc-300 dark:border-[var(--app-sidebar-border)] dark:bg-[var(--app-control-bg)] dark:open:border-white/20">
+      <summary className="flex cursor-pointer list-none items-center gap-3 rounded-2xl p-5 outline-none transition hover:bg-zinc-50 focus-visible:ring-4 focus-visible:ring-[var(--accent-ring)] dark:hover:bg-white/[0.035] sm:px-7 [&::-webkit-details-marker]:hidden">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-strong">
           {icon}
         </span>
-        <h2 className="text-2xl font-bold text-zinc-950 dark:text-white">
+        <h2 className="min-w-0 flex-1 text-xl font-bold text-zinc-950 dark:text-white sm:text-2xl">
           {title}
         </h2>
+        <ChevronDown
+          aria-hidden="true"
+          className="h-5 w-5 shrink-0 text-zinc-400 transition duration-200 group-open:rotate-180"
+        />
+      </summary>
+      <div className="mx-5 border-t border-zinc-200 pb-6 pt-5 dark:border-[var(--app-sidebar-border)] sm:mx-7">
+        <div className="max-w-3xl space-y-4 text-sm leading-7 text-zinc-600 dark:text-zinc-300 sm:text-base">
+          {children}
+        </div>
       </div>
-      <div className="mt-5 max-w-3xl space-y-4 text-sm leading-7 text-zinc-600 dark:text-zinc-300 sm:text-base">
-        {children}
-      </div>
-    </article>
+    </details>
   );
 }
