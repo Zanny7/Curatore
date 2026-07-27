@@ -3,7 +3,6 @@
 import {
   ArrowLeft,
   CalendarClock,
-  CheckSquare,
   ChevronDown,
   ChevronUp,
   Copy,
@@ -14,7 +13,9 @@ import {
   Play,
   Plus,
   RefreshCw,
+  Repeat2,
   SlidersHorizontal,
+  Square,
   Star,
   Tags,
   Trash2,
@@ -61,7 +62,9 @@ export default function PlaylistDetailPage() {
   );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [metadataVideo, setMetadataVideo] = useState<VideoItem | null>(null);
+  const [ratingVideo, setRatingVideo] = useState<VideoItem | null>(null);
+  const [tagsVideo, setTagsVideo] = useState<VideoItem | null>(null);
+  const [frequencyVideo, setFrequencyVideo] = useState<VideoItem | null>(null);
   const [transfer, setTransfer] = useState<{
     ids: string[];
     mode: TransferMode;
@@ -390,27 +393,47 @@ export default function PlaylistDetailPage() {
                     {video.channelTitle}
                     {video.duration ? ` · ${video.duration}` : ""}
                   </p>
+                  <div className="mt-2 flex items-center gap-1 2xl:hidden">
+                    <CompactSongControl
+                      icon={Repeat2}
+                      label={`${video.playFrequency ?? 1}x`}
+                      onClick={() => setFrequencyVideo(video)}
+                    />
+                    <CompactSongControl
+                      active={Boolean(metadata.rating)}
+                      icon={Star}
+                      label={
+                        metadata.rating ? `${metadata.rating}/10` : "—"
+                      }
+                      onClick={() => setRatingVideo(video)}
+                    />
+                    <CompactSongControl
+                      active={metadata.keywords.length > 0}
+                      icon={Tags}
+                      label={
+                        metadata.keywords.length > 0
+                          ? String(metadata.keywords.length)
+                          : "—"
+                      }
+                      onClick={() => setTagsVideo(video)}
+                    />
+                  </div>
                 </div>
-                <label className="hidden shrink-0 items-center gap-1 text-xs text-zinc-400 lg:flex">
-                  <span className="sr-only">Play frequency for {video.title}</span>
-                  <select
-                    className="h-9 rounded-lg border border-zinc-200 bg-transparent px-2 text-sm font-semibold text-zinc-600 outline-none focus:border-accent dark:border-white/10 dark:text-zinc-300"
-                    onChange={(event) =>
-                      setPlaylistVideoFrequency(playlist.id, [video.id], Number(event.target.value))
-                    }
-                    value={video.playFrequency ?? 1}
-                  >
-                    {[1, 2, 3, 4, 5].map((frequency) => (
-                      <option key={frequency} value={frequency}>
-                        {frequency}×
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <button
+                  aria-label={`Set play frequency for ${video.title}`}
+                  className="hidden w-24 shrink-0 items-center gap-2 rounded-lg px-2 py-2 text-sm text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5 2xl:flex"
+                  onClick={() => setFrequencyVideo(video)}
+                  type="button"
+                >
+                  <Repeat2 aria-hidden="true" className="h-4 w-4" />
+                  {(video.playFrequency ?? 1) === 1
+                    ? "Default"
+                    : `${video.playFrequency}x`}
+                </button>
                 <button
                   aria-label={`Rate ${video.title}`}
-                  className="hidden w-24 shrink-0 items-center gap-2 rounded-lg px-2 py-2 text-sm text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5 sm:flex"
-                  onClick={() => setMetadataVideo(video)}
+                  className="hidden w-24 shrink-0 items-center gap-2 rounded-lg px-2 py-2 text-sm text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5 2xl:flex"
+                  onClick={() => setRatingVideo(video)}
                   type="button"
                 >
                   <Star
@@ -424,8 +447,9 @@ export default function PlaylistDetailPage() {
                   {metadata.rating ? `${metadata.rating}/10` : "Unrated"}
                 </button>
                 <button
+                  aria-label={`Edit tags for ${video.title}`}
                   className="hidden w-40 shrink-0 items-center gap-2 overflow-hidden rounded-lg px-2 py-2 text-left text-xs text-zinc-500 transition hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-white/5 2xl:flex"
-                  onClick={() => setMetadataVideo(video)}
+                  onClick={() => setTagsVideo(video)}
                   type="button"
                 >
                   <Tags aria-hidden="true" className="h-4 w-4 shrink-0" />
@@ -453,14 +477,9 @@ export default function PlaylistDetailPage() {
                   </button>
                   {openMenuId === video.id ? (
                     <SongMenu
-                      metadata={metadata}
                       onClose={() => setOpenMenuId(null)}
                       onCopy={() => {
                         setTransfer({ ids: [video.id], mode: "copy" });
-                        setOpenMenuId(null);
-                      }}
-                      onEdit={() => {
-                        setMetadataVideo(video);
                         setOpenMenuId(null);
                       }}
                       onMove={() => {
@@ -494,13 +513,6 @@ export default function PlaylistDetailPage() {
                       onTrim={(updates) =>
                         updatePlaylistVideo(playlist.id, video.id, updates)
                       }
-                      onFrequency={(frequency) =>
-                        setPlaylistVideoFrequency(
-                          playlist.id,
-                          [video.id],
-                          frequency
-                        )
-                      }
                       video={video}
                     />
                   ) : null}
@@ -520,16 +532,55 @@ export default function PlaylistDetailPage() {
         </div>
       )}
 
-      {metadataVideo ? (
+      {ratingVideo ? (
         <MetadataDialog
-          initial={songMetadata[metadataVideo.id] ?? { keywords: [] }}
-          onClose={() => setMetadataVideo(null)}
+          initial={songMetadata[ratingVideo.id] ?? { keywords: [] }}
+          mode="rating"
+          onClose={() => setRatingVideo(null)}
           onSave={(metadata) => {
-            updateSongMetadata(metadataVideo.id, metadata);
-            setMetadataVideo(null);
+            const current = songMetadata[ratingVideo.id] ?? { keywords: [] };
+            updateSongMetadata(ratingVideo.id, {
+              ...current,
+              rating: metadata.rating
+            });
+            setRatingVideo(null);
           }}
           suggestions={tagSuggestions}
-          title={metadataVideo.title}
+          title={ratingVideo.title}
+        />
+      ) : null}
+
+      {tagsVideo ? (
+        <MetadataDialog
+          initial={songMetadata[tagsVideo.id] ?? { keywords: [] }}
+          mode="tags"
+          onClose={() => setTagsVideo(null)}
+          onSave={(metadata) => {
+            const current = songMetadata[tagsVideo.id] ?? { keywords: [] };
+            updateSongMetadata(tagsVideo.id, {
+              ...current,
+              keywords: metadata.keywords
+            });
+            setTagsVideo(null);
+          }}
+          suggestions={tagSuggestions}
+          title={tagsVideo.title}
+        />
+      ) : null}
+
+      {frequencyVideo ? (
+        <FrequencyDialog
+          initial={frequencyVideo.playFrequency ?? 1}
+          onClose={() => setFrequencyVideo(null)}
+          onSave={(frequency) => {
+            setPlaylistVideoFrequency(
+              playlist.id,
+              [frequencyVideo.id],
+              frequency
+            );
+            setFrequencyVideo(null);
+          }}
+          title={frequencyVideo.title}
         />
       ) : null}
 
@@ -659,6 +710,33 @@ function BackButton({ onClick }: { onClick: () => void }) {
   );
 }
 
+function CompactSongControl({
+  active = false,
+  icon: Icon,
+  label,
+  onClick
+}: {
+  active?: boolean;
+  icon: typeof Star;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={`inline-flex h-7 min-w-0 items-center gap-1 rounded-md px-1.5 text-[10px] font-medium transition hover:bg-zinc-100 hover:text-accent-strong dark:hover:bg-white/5 ${
+        active
+          ? "text-accent-strong"
+          : "text-zinc-500 dark:text-zinc-400"
+      }`}
+      onClick={onClick}
+      type="button"
+    >
+      <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+      <span className="truncate">{label}</span>
+    </button>
+  );
+}
+
 function BulkToolbar({
   allSelected,
   count,
@@ -691,7 +769,11 @@ function BulkToolbar({
         onClick={onToggleAll}
         type="button"
       >
-        <CheckSquare aria-hidden="true" className="h-4 w-4" />
+        {allSelected ? (
+          <X aria-hidden="true" className="h-4 w-4" />
+        ) : (
+          <Square aria-hidden="true" className="h-4 w-4" />
+        )}
         {allSelected ? "Deselect all" : "Select all"}
       </button>
       <span className="mr-auto text-xs font-medium text-zinc-400">
@@ -761,67 +843,26 @@ function ToolbarButton({
 }
 
 function SongMenu({
-  metadata,
   onClose,
   onCopy,
-  onEdit,
   onMove,
   onMoveDown,
   onMoveUp,
   onRemove,
-  onFrequency,
   onTrim,
   video
 }: {
-  metadata: SongMetadata;
   onClose: () => void;
   onCopy: () => void;
-  onEdit: () => void;
   onMove: () => void;
   onMoveDown?: () => void;
   onMoveUp?: () => void;
   onRemove: () => void;
-  onFrequency: (frequency: number) => void;
   onTrim: (updates: Partial<VideoItem>) => void;
   video: VideoItem;
 }) {
   return (
     <div className="absolute right-0 top-11 z-30 w-72 rounded-xl border border-zinc-200 bg-white p-2 shadow-2xl dark:border-white/10 dark:bg-neutral-950">
-      <button
-        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-700 transition hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-white/5"
-        onClick={onEdit}
-        type="button"
-      >
-        <Star aria-hidden="true" className="h-4 w-4" />
-        Rating & tags
-        {metadata.rating ? (
-          <span className="ml-auto text-xs text-zinc-400">
-            {metadata.rating}/10
-          </span>
-        ) : null}
-      </button>
-      <div className="my-1 flex items-center justify-between border-t border-zinc-200 px-3 py-2 dark:border-white/10">
-        <div>
-          <p className="text-sm text-zinc-700 dark:text-zinc-200">
-            Play frequency
-          </p>
-          <p className="text-[11px] text-zinc-400">
-            Appearances per cycle
-          </p>
-        </div>
-        <select
-          aria-label={`Play frequency for ${video.title}`}
-          className="h-9 rounded-lg border border-zinc-200 bg-transparent px-2 text-sm font-semibold outline-none focus:border-accent dark:border-white/10 dark:bg-neutral-900"
-          onChange={(event) => onFrequency(Number(event.target.value))}
-          value={video.playFrequency ?? 1}
-        >
-          {[1, 2, 3, 4, 5].map((frequency) => (
-            <option key={frequency} value={frequency}>
-              {frequency}×
-            </option>
-          ))}
-        </select>
-      </div>
       <button
         className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-700 transition hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-white/5"
         onClick={onCopy}
@@ -919,12 +960,14 @@ function TrimField({
 
 function MetadataDialog({
   initial,
+  mode,
   onClose,
   onSave,
   suggestions,
   title
 }: {
   initial: SongMetadata;
+  mode: "rating" | "tags";
   onClose: () => void;
   onSave: (metadata: SongMetadata) => void;
   suggestions: string[];
@@ -936,9 +979,10 @@ function MetadataDialog({
   return (
     <Modal onClose={onClose}>
       <p className="text-accent text-xs font-semibold uppercase tracking-[0.18em]">
-        Song details
+        {mode === "rating" ? "Song rating" : "Song tags"}
       </p>
       <h2 className="mt-2 truncate text-2xl font-bold text-white">{title}</h2>
+      {mode === "rating" ? (
       <div className="mt-6">
         <p className="text-sm font-semibold text-zinc-200">Overall rating</p>
         <div className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-10">
@@ -959,6 +1003,8 @@ function MetadataDialog({
           ))}
         </div>
       </div>
+      ) : null}
+      {mode === "tags" ? (
       <div className="mt-7">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-zinc-200">Tags</p>
@@ -1047,6 +1093,7 @@ function MetadataDialog({
           ))}
         </datalist>
       </div>
+      ) : null}
       <div className="mt-7 flex gap-3">
         <button
           className="h-11 flex-1 rounded-xl border border-white/10 text-sm font-semibold text-zinc-300"
@@ -1070,7 +1117,71 @@ function MetadataDialog({
           }
           type="button"
         >
-          Save details
+          {mode === "rating" ? "Save rating" : "Save tags"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function FrequencyDialog({
+  initial,
+  onClose,
+  onSave,
+  title
+}: {
+  initial: number;
+  onClose: () => void;
+  onSave: (frequency: number) => void;
+  title: string;
+}) {
+  const [frequency, setFrequency] = useState(initial);
+
+  return (
+    <Modal onClose={onClose}>
+      <p className="text-accent text-xs font-semibold uppercase tracking-[0.18em]">
+        Play frequency
+      </p>
+      <h2 className="mt-2 truncate text-2xl font-bold text-white">{title}</h2>
+      <p className="mt-3 text-sm leading-6 text-zinc-400">
+        Choose exactly how many times this song appears in each playlist cycle.
+      </p>
+      <div className="mt-6 grid grid-cols-5 gap-2">
+        {[1, 2, 3, 4, 5].map((value) => (
+          <button
+            aria-pressed={frequency === value}
+            className={`flex h-14 flex-col items-center justify-center rounded-xl border text-sm font-semibold transition ${
+              frequency === value
+                ? "border-[var(--accent)] bg-[var(--accent)] text-black"
+                : "border-white/10 text-zinc-400 hover:border-[var(--accent)] hover:text-white"
+            }`}
+            key={value}
+            onClick={() => setFrequency(value)}
+            type="button"
+          >
+            <span>{value}x</span>
+            {value === 1 ? (
+              <span className="text-[9px] font-medium uppercase tracking-wide">
+                Default
+              </span>
+            ) : null}
+          </button>
+        ))}
+      </div>
+      <div className="mt-7 flex gap-3">
+        <button
+          className="h-11 flex-1 rounded-xl border border-white/10 text-sm font-semibold text-zinc-300"
+          onClick={onClose}
+          type="button"
+        >
+          Cancel
+        </button>
+        <button
+          className="h-11 flex-1 rounded-xl bg-white text-sm font-semibold text-zinc-950 transition hover:bg-[var(--accent)]"
+          onClick={() => onSave(frequency)}
+          type="button"
+        >
+          Save frequency
         </button>
       </div>
     </Modal>
