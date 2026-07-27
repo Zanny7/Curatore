@@ -6,6 +6,8 @@ import {
   ArrowUp,
   ArrowUpDown,
   CalendarClock,
+  Check,
+  ChevronDown,
   Copy,
   GripVertical,
   MoreHorizontal,
@@ -34,7 +36,7 @@ import type {
 
 type TransferMode = "copy" | "move";
 type InlineEditorKind = "frequency" | "rating" | "tags";
-type SortKey = "song" | "frequency" | "rating";
+type SortKey = "song" | "frequency" | "rating" | "tags";
 type SortDirection = "asc" | "desc";
 
 export default function PlaylistDetailPage() {
@@ -81,6 +83,7 @@ export default function PlaylistDetailPage() {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [selectedSortTag, setSelectedSortTag] = useState<string | null>(null);
   const [sort, setSort] = useState<{
     direction: SortDirection;
     key: SortKey;
@@ -99,6 +102,21 @@ export default function PlaylistDetailPage() {
         )
       ).sort((a, b) => a.localeCompare(b)),
     [songMetadata]
+  );
+  const playlistTags = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          (playlist?.videos ?? []).flatMap((video) =>
+            (songMetadata[video.id]?.keywords ?? []).map(
+              (keyword) => keyword.name
+            )
+          )
+        )
+      ).sort((left, right) =>
+        left.localeCompare(right, undefined, { sensitivity: "base" })
+      ),
+    [playlist, songMetadata]
   );
 
   useEffect(() => {
@@ -144,7 +162,7 @@ export default function PlaylistDetailPage() {
         } else if (sort.key === "frequency") {
           comparison =
             (left.playFrequency ?? 1) - (right.playFrequency ?? 1);
-        } else {
+        } else if (sort.key === "rating") {
           const leftRating = songMetadata[left.id]?.rating;
           const rightRating = songMetadata[right.id]?.rating;
 
@@ -156,6 +174,27 @@ export default function PlaylistDetailPage() {
             return -1;
           } else {
             comparison = leftRating - rightRating;
+          }
+        } else {
+          const leftTagRating = songMetadata[left.id]?.keywords.find(
+            (keyword) =>
+              keyword.name.toLocaleLowerCase() ===
+              selectedSortTag?.toLocaleLowerCase()
+          )?.rating;
+          const rightTagRating = songMetadata[right.id]?.keywords.find(
+            (keyword) =>
+              keyword.name.toLocaleLowerCase() ===
+              selectedSortTag?.toLocaleLowerCase()
+          )?.rating;
+
+          if (leftTagRating == null && rightTagRating == null) {
+            comparison = 0;
+          } else if (leftTagRating == null) {
+            return 1;
+          } else if (rightTagRating == null) {
+            return -1;
+          } else {
+            comparison = leftTagRating - rightTagRating;
           }
         }
 
@@ -371,8 +410,7 @@ export default function PlaylistDetailPage() {
 
       {playlist.videos.length > 0 ? (
         <div className="overflow-visible rounded-2xl border border-zinc-200 bg-white/85 shadow-sm backdrop-blur dark:border-white/10 dark:bg-neutral-900/85">
-          <div className="flex items-center gap-4 border-b border-zinc-200 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400 dark:border-white/10 2xl:hidden">
-            <span className="mr-auto">Sort</span>
+          <div className="flex items-center justify-between gap-2 border-b border-zinc-200 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400 dark:border-white/10 2xl:hidden">
             <SortButton
               active={sort?.key === "song"}
               direction={sort?.key === "song" ? sort.direction : undefined}
@@ -392,6 +430,16 @@ export default function PlaylistDetailPage() {
               direction={sort?.key === "rating" ? sort.direction : undefined}
               label="Rating"
               onClick={() => toggleSort("rating")}
+            />
+            <TagSortControl
+              active={sort?.key === "tags"}
+              direction={sort?.key === "tags" ? sort.direction : undefined}
+              onSelect={setSelectedSortTag}
+              onToggle={() =>
+                selectedSortTag ? toggleSort("tags") : undefined
+              }
+              selectedTag={selectedSortTag}
+              tags={playlistTags}
             />
           </div>
           <div className="hidden grid-cols-[1.25rem_2rem_6rem_minmax(0,1fr)_6rem_6rem_10rem_2.5rem] items-center gap-3 border-b border-zinc-200 px-3 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:border-white/10 2xl:grid">
@@ -421,7 +469,17 @@ export default function PlaylistDetailPage() {
               label="Rating"
               onClick={() => toggleSort("rating")}
             />
-            <span className="pl-2">Tags</span>
+            <TagSortControl
+              active={sort?.key === "tags"}
+              className="pl-2"
+              direction={sort?.key === "tags" ? sort.direction : undefined}
+              onSelect={setSelectedSortTag}
+              onToggle={() =>
+                selectedSortTag ? toggleSort("tags") : undefined
+              }
+              selectedTag={selectedSortTag}
+              tags={playlistTags}
+            />
             <span />
           </div>
           {displayedVideos.map((video, index) => {
@@ -827,6 +885,106 @@ function SortButton({
       <span>{label}</span>
       <SortIcon aria-hidden="true" className="h-3 w-3 shrink-0" />
     </button>
+  );
+}
+
+function TagSortControl({
+  active,
+  className = "",
+  direction,
+  onSelect,
+  onToggle,
+  selectedTag,
+  tags
+}: {
+  active: boolean;
+  className?: string;
+  direction?: SortDirection;
+  onSelect: (tag: string) => void;
+  onToggle: () => void;
+  selectedTag: string | null;
+  tags: string[];
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className={`relative flex min-w-0 items-center gap-1 ${className}`}>
+      <SortButton
+        active={active}
+        direction={direction}
+        label="Tags"
+        onClick={() => {
+          if (selectedTag) {
+            onToggle();
+          } else {
+            setOpen(true);
+          }
+        }}
+      />
+      <button
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-label={
+          selectedTag
+            ? `Choose tag to sort by, currently ${selectedTag}`
+            : "Choose tag to sort by"
+        }
+        className={`flex h-6 min-w-6 max-w-20 items-center justify-center gap-0.5 rounded-md border px-1 text-[10px] normal-case tracking-normal transition ${
+          selectedTag
+            ? "border-accent bg-accent-soft text-accent-strong"
+            : "border-zinc-200 text-zinc-400 hover:border-accent hover:text-accent-strong dark:border-white/10"
+        }`}
+        disabled={tags.length === 0}
+        onClick={() => setOpen((current) => !current)}
+        type="button"
+      >
+        {selectedTag ? (
+          <span className="truncate">{selectedTag}</span>
+        ) : (
+          <Tags aria-hidden="true" className="h-3 w-3" />
+        )}
+        <ChevronDown aria-hidden="true" className="h-3 w-3 shrink-0" />
+      </button>
+      {open ? (
+        <div
+          aria-label="Tags used in this playlist"
+          className="absolute right-0 top-[calc(100%+0.4rem)] z-[80] w-44 overflow-hidden rounded-xl border border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] p-1.5 text-left normal-case tracking-normal shadow-2xl backdrop-blur-xl"
+          role="listbox"
+        >
+          <p className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+            Sort by tag
+          </p>
+          <div className="max-h-48 overflow-y-auto">
+            {tags.map((tag) => {
+              const selected =
+                tag.toLocaleLowerCase() === selectedTag?.toLocaleLowerCase();
+              return (
+                <button
+                  aria-selected={selected}
+                  className={`flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-xs transition ${
+                    selected
+                      ? "bg-accent-soft text-accent-strong"
+                      : "text-zinc-300 hover:bg-white/5 hover:text-white"
+                  }`}
+                  key={tag}
+                  onClick={() => {
+                    onSelect(tag);
+                    setOpen(false);
+                  }}
+                  role="option"
+                  type="button"
+                >
+                  <span className="truncate">{tag}</span>
+                  {selected ? (
+                    <Check aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
