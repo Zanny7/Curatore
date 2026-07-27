@@ -328,9 +328,9 @@ export default function PlaylistDetailPage() {
             <span />
             <span />
             <span className="text-center">Song</span>
-            <span>Frequency</span>
-            <span>Rating</span>
-            <span>Tags</span>
+            <span className="pl-2">Freq</span>
+            <span className="pl-2">Rating</span>
+            <span className="pl-2">Tags</span>
             <span />
           </div>
           {playlist.videos.map((video, index) => {
