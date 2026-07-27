@@ -1,7 +1,10 @@
 "use client";
 
 import {
+  ArrowDown,
   ArrowLeft,
+  ArrowUp,
+  ArrowUpDown,
   CalendarClock,
   Copy,
   GripVertical,
@@ -31,6 +34,8 @@ import type {
 
 type TransferMode = "copy" | "move";
 type InlineEditorKind = "frequency" | "rating" | "tags";
+type SortKey = "song" | "frequency" | "rating";
+type SortDirection = "asc" | "desc";
 
 export default function PlaylistDetailPage() {
   const router = useRouter();
@@ -76,6 +81,10 @@ export default function PlaylistDetailPage() {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [sort, setSort] = useState<{
+    direction: SortDirection;
+    key: SortKey;
+  } | null>(null);
   const [undoRemoval, setUndoRemoval] = useState<{
     playlistId: string;
     removed: RemovedPlaylistVideo[];
@@ -123,6 +132,36 @@ export default function PlaylistDetailPage() {
   const selected = Array.from(selectedIds);
   const allSelected =
     playlist.videos.length > 0 && selectedIds.size === playlist.videos.length;
+  const displayedVideos = sort
+    ? [...playlist.videos].sort((left, right) => {
+        let comparison = 0;
+
+        if (sort.key === "song") {
+          comparison = left.title.localeCompare(right.title, undefined, {
+            numeric: true,
+            sensitivity: "base"
+          });
+        } else if (sort.key === "frequency") {
+          comparison =
+            (left.playFrequency ?? 1) - (right.playFrequency ?? 1);
+        } else {
+          const leftRating = songMetadata[left.id]?.rating;
+          const rightRating = songMetadata[right.id]?.rating;
+
+          if (leftRating == null && rightRating == null) {
+            comparison = 0;
+          } else if (leftRating == null) {
+            return 1;
+          } else if (rightRating == null) {
+            return -1;
+          } else {
+            comparison = leftRating - rightRating;
+          }
+        }
+
+        return sort.direction === "asc" ? comparison : -comparison;
+      })
+    : playlist.videos;
 
   function toggleSong(videoId: string) {
     setSelectedIds((current) => {
@@ -150,6 +189,15 @@ export default function PlaylistDetailPage() {
         ? null
         : { kind, videoId }
     );
+  }
+
+  function toggleSort(key: SortKey) {
+    setSort((current) => ({
+      direction:
+        current?.key === key && current.direction === "asc" ? "desc" : "asc",
+      key
+    }));
+    setDragIndex(null);
   }
 
   function playFrom(videoId?: string) {
@@ -323,17 +371,60 @@ export default function PlaylistDetailPage() {
 
       {playlist.videos.length > 0 ? (
         <div className="overflow-visible rounded-2xl border border-zinc-200 bg-white/85 shadow-sm backdrop-blur dark:border-white/10 dark:bg-neutral-900/85">
+          <div className="flex items-center gap-4 border-b border-zinc-200 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400 dark:border-white/10 2xl:hidden">
+            <span className="mr-auto">Sort</span>
+            <SortButton
+              active={sort?.key === "song"}
+              direction={sort?.key === "song" ? sort.direction : undefined}
+              label="Song"
+              onClick={() => toggleSort("song")}
+            />
+            <SortButton
+              active={sort?.key === "frequency"}
+              direction={
+                sort?.key === "frequency" ? sort.direction : undefined
+              }
+              label="Freq"
+              onClick={() => toggleSort("frequency")}
+            />
+            <SortButton
+              active={sort?.key === "rating"}
+              direction={sort?.key === "rating" ? sort.direction : undefined}
+              label="Rating"
+              onClick={() => toggleSort("rating")}
+            />
+          </div>
           <div className="hidden grid-cols-[1.25rem_2rem_6rem_minmax(0,1fr)_6rem_6rem_10rem_2.5rem] items-center gap-3 border-b border-zinc-200 px-3 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:border-white/10 2xl:grid">
             <span />
             <span />
             <span />
-            <span className="text-center">Song</span>
-            <span className="pl-2">Freq</span>
-            <span className="pl-2">Rating</span>
+            <SortButton
+              active={sort?.key === "song"}
+              className="justify-center"
+              direction={sort?.key === "song" ? sort.direction : undefined}
+              label="Song"
+              onClick={() => toggleSort("song")}
+            />
+            <SortButton
+              active={sort?.key === "frequency"}
+              className="pl-2"
+              direction={
+                sort?.key === "frequency" ? sort.direction : undefined
+              }
+              label="Freq"
+              onClick={() => toggleSort("frequency")}
+            />
+            <SortButton
+              active={sort?.key === "rating"}
+              className="pl-2"
+              direction={sort?.key === "rating" ? sort.direction : undefined}
+              label="Rating"
+              onClick={() => toggleSort("rating")}
+            />
             <span className="pl-2">Tags</span>
             <span />
           </div>
-          {playlist.videos.map((video, index) => {
+          {displayedVideos.map((video, index) => {
             const metadata = songMetadata[video.id] ?? { keywords: [] };
             const isSelected = selectedIds.has(video.id);
             const editorKind =
@@ -368,7 +459,7 @@ export default function PlaylistDetailPage() {
                 className={`relative flex items-center gap-3 border-b border-zinc-200 p-3 transition last:border-b-0 dark:border-white/10 2xl:grid 2xl:grid-cols-[1.25rem_2rem_6rem_minmax(0,1fr)_6rem_6rem_10rem_2.5rem] ${
                   isSelected ? "bg-accent-subtle" : "hover:bg-zinc-50/80 dark:hover:bg-white/[0.025]"
                 }`}
-                draggable
+                draggable={!sort}
                 key={video.id}
                 onDragEnd={() => setDragIndex(null)}
                 onDragOver={(event) => event.preventDefault()}
@@ -386,7 +477,11 @@ export default function PlaylistDetailPage() {
               >
                 <span
                   aria-label={`Drag to reorder ${video.title}`}
-                  className="hidden h-10 w-5 shrink-0 cursor-grab items-center justify-center text-zinc-400 active:cursor-grabbing sm:flex"
+                  className={`hidden h-10 w-5 shrink-0 items-center justify-center text-zinc-400 sm:flex ${
+                    sort
+                      ? "cursor-default opacity-35"
+                      : "cursor-grab active:cursor-grabbing"
+                  }`}
                   role="img"
                 >
                   <GripVertical aria-hidden="true" className="h-5 w-5" />
@@ -689,6 +784,48 @@ function BackButton({ onClick }: { onClick: () => void }) {
     >
       <ArrowLeft aria-hidden="true" className="h-4 w-4" />
       Back to playlists
+    </button>
+  );
+}
+
+function SortButton({
+  active,
+  className = "",
+  direction,
+  label,
+  onClick
+}: {
+  active: boolean;
+  className?: string;
+  direction?: SortDirection;
+  label: string;
+  onClick: () => void;
+}) {
+  const SortIcon =
+    direction === "asc"
+      ? ArrowUp
+      : direction === "desc"
+        ? ArrowDown
+        : ArrowUpDown;
+
+  return (
+    <button
+      aria-label={`Sort by ${label}${
+        direction === "asc"
+          ? ", currently ascending"
+          : direction === "desc"
+            ? ", currently descending"
+            : ""
+      }`}
+      aria-pressed={active}
+      className={`flex items-center gap-1 transition hover:text-zinc-700 dark:hover:text-zinc-200 ${
+        active ? "text-accent-strong" : ""
+      } ${className}`}
+      onClick={onClick}
+      type="button"
+    >
+      <span>{label}</span>
+      <SortIcon aria-hidden="true" className="h-3 w-3 shrink-0" />
     </button>
   );
 }
