@@ -117,6 +117,7 @@ export function readStoredSongMetadata(): Record<string, SongMetadata> {
         videoId,
         {
           ...metadata,
+          keywords: (metadata.keywords ?? []).slice(0, 3),
           rating:
             metadata.rating === undefined
               ? undefined

@@ -612,6 +612,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           ...current,
           [videoId]: {
             ...metadata,
+            keywords: metadata.keywords.slice(0, 3),
             rating:
               metadata.rating === undefined
                 ? undefined

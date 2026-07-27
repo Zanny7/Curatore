@@ -430,61 +430,59 @@ export default function PlaylistDetailPage() {
                     {video.channelTitle}
                     {video.duration ? ` · ${video.duration}` : ""}
                   </p>
-                  <div className="relative mt-2 flex items-center gap-1 2xl:hidden">
+                  <div className="relative mt-2 flex flex-wrap items-center gap-x-1 gap-y-1 2xl:hidden">
                     <CompactSongControl
+                      ariaLabel={`Set play frequency for ${video.title}`}
                       editor={editorKind === "frequency" ? editor : null}
                       icon={Repeat2}
                       label={`${video.playFrequency ?? 1}x`}
                       onClick={() =>
                         toggleInlineEditor(video.id, "frequency")
                       }
-                      width="frequency"
                     />
                     <CompactSongControl
                       active={Boolean(metadata.rating)}
+                      ariaLabel={`Rate ${video.title}`}
                       editor={editorKind === "rating" ? editor : null}
                       icon={Star}
                       label={
                         metadata.rating ? `${metadata.rating}/5` : "—"
                       }
                       onClick={() => toggleInlineEditor(video.id, "rating")}
-                      width="rating"
                     />
                     <CompactSongControl
                       active={metadata.keywords.length > 0}
+                      ariaLabel={`Edit tags for ${video.title}`}
                       editor={editorKind === "tags" ? editor : null}
                       icon={Tags}
-                      label={
-                        metadata.keywords.length > 0
-                          ? String(metadata.keywords.length)
-                          : "—"
-                      }
+                      label={<TagPills keywords={metadata.keywords} />}
                       onClick={() => toggleInlineEditor(video.id, "tags")}
-                      width="tags"
                     />
                   </div>
                 </div>
                 <div className="relative hidden shrink-0 items-center 2xl:flex">
-                  <div className="relative w-24">
+                  <div className="relative flex w-24 items-center gap-1">
                     <button
                       aria-label={`Set play frequency for ${video.title}`}
-                      className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
                       onClick={() =>
                         toggleInlineEditor(video.id, "frequency")
                       }
                       type="button"
                     >
                       <Repeat2 aria-hidden="true" className="h-4 w-4" />
+                    </button>
+                    <span className="text-sm text-zinc-500 dark:text-zinc-400">
                       {(video.playFrequency ?? 1) === 1
                         ? "Default"
                         : `${video.playFrequency}x`}
-                    </button>
+                    </span>
                     {editorKind === "frequency" ? editor : null}
                   </div>
-                  <div className="relative w-24">
+                  <div className="relative flex w-24 items-center gap-1">
                     <button
                       aria-label={`Rate ${video.title}`}
-                      className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
                       onClick={() => toggleInlineEditor(video.id, "rating")}
                       type="button"
                     >
@@ -496,30 +494,22 @@ export default function PlaylistDetailPage() {
                             : ""
                         }`}
                       />
-                      {metadata.rating ? `${metadata.rating}/5` : "Unrated"}
                     </button>
+                    <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                      {metadata.rating ? `${metadata.rating}/5` : "Unrated"}
+                    </span>
                     {editorKind === "rating" ? editor : null}
                   </div>
-                  <div className="relative w-40">
+                  <div className="relative flex w-40 items-center gap-1">
                     <button
                       aria-label={`Edit tags for ${video.title}`}
-                      className="flex w-full items-center gap-2 overflow-hidden rounded-lg px-2 py-2 text-left text-xs text-zinc-500 transition hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-white/5"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
                       onClick={() => toggleInlineEditor(video.id, "tags")}
                       type="button"
                     >
                       <Tags aria-hidden="true" className="h-4 w-4 shrink-0" />
-                      <span className="truncate">
-                        {metadata.keywords.length > 0
-                          ? metadata.keywords
-                              .slice(0, 2)
-                              .map(
-                                (keyword) =>
-                                  `${keyword.name} ${keyword.rating}`
-                              )
-                              .join(" · ")
-                          : "Add tags"}
-                      </span>
                     </button>
+                    <TagPills keywords={metadata.keywords} />
                     {editorKind === "tags" ? editor : null}
                   </div>
                 </div>
@@ -721,26 +711,24 @@ function BackButton({ onClick }: { onClick: () => void }) {
 
 function CompactSongControl({
   active = false,
+  ariaLabel,
   editor,
   icon: Icon,
   label,
-  onClick,
-  width
+  onClick
 }: {
   active?: boolean;
+  ariaLabel: string;
   editor?: React.ReactNode;
   icon: typeof Star;
-  label: string;
+  label: React.ReactNode;
   onClick: () => void;
-  width: "frequency" | "rating" | "tags";
 }) {
-  const widthClass =
-    width === "frequency" ? "w-12" : width === "rating" ? "w-14" : "w-10";
-
   return (
-    <div className={`relative shrink-0 ${widthClass}`}>
+    <div className="relative inline-flex min-w-0 shrink-0 items-center gap-0.5">
       <button
-        className={`inline-flex h-7 w-full min-w-0 items-center justify-center gap-1 rounded-md px-1 text-[10px] font-medium transition hover:bg-zinc-100 hover:text-accent-strong dark:hover:bg-white/5 ${
+        aria-label={ariaLabel}
+        className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md p-1 text-[10px] transition hover:bg-zinc-100 hover:text-accent-strong dark:hover:bg-white/5 ${
           active
             ? "text-accent-strong"
             : "text-zinc-500 dark:text-zinc-400"
@@ -749,10 +737,34 @@ function CompactSongControl({
         type="button"
       >
         <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-        <span className="truncate">{label}</span>
       </button>
+      <span className="min-w-0 text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
+        {label}
+      </span>
       {editor}
     </div>
+  );
+}
+
+function TagPills({ keywords }: { keywords: SongMetadata["keywords"] }) {
+  if (keywords.length === 0) {
+    return <span>—</span>;
+  }
+
+  return (
+    <span className="flex min-w-0 flex-wrap gap-1">
+      {keywords.slice(0, 3).map((keyword) => (
+        <span
+          className="group/tag relative inline-flex max-w-20 items-center rounded-full bg-accent-soft px-2 py-0.5 text-[9px] font-semibold text-accent-strong"
+          key={keyword.name}
+        >
+          <span className="truncate">{keyword.name}</span>
+          <span className="pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] px-2 py-1 text-[9px] text-zinc-200 shadow-lg group-hover/tag:block">
+            {keyword.rating}/10 match
+          </span>
+        </span>
+      ))}
+    </span>
   );
 }
 
@@ -999,6 +1011,7 @@ function SongInlineEditor({
   const [keywords, setKeywords] = useState(metadata.keywords);
   const [tagName, setTagName] = useState("");
   const [tagRating, setTagRating] = useState(5);
+  const atTagLimit = keywords.length >= 3;
   const unusedSuggestions = suggestions.filter(
     (suggestion) =>
       !keywords.some(
@@ -1012,13 +1025,16 @@ function SongInlineEditor({
     if (!trimmed) {
       return;
     }
-    setKeywords((current) => [
-      ...current.filter(
+    setKeywords((current) => {
+      const withoutMatch = current.filter(
         (keyword) =>
           keyword.name.toLocaleLowerCase() !== trimmed.toLocaleLowerCase()
-      ),
-      { name: trimmed, rating: tagRating }
-    ]);
+      );
+      if (withoutMatch.length === current.length && current.length >= 3) {
+        return current;
+      }
+      return [...withoutMatch, { name: trimmed, rating: tagRating }].slice(0, 3);
+    });
     setTagName("");
   }
 
@@ -1029,10 +1045,12 @@ function SongInlineEditor({
 
   return (
     <div
-      className={`absolute top-[calc(100%+0.35rem)] z-50 overflow-hidden rounded-xl border border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] text-left shadow-2xl backdrop-blur-xl ${
+      className={`absolute z-50 overflow-hidden rounded-xl border border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] text-left shadow-2xl backdrop-blur-xl ${
         kind === "tags"
-          ? "right-0 w-[min(18rem,calc(100vw-2rem))] p-3"
-          : "left-0 w-full p-1.5"
+          ? "right-0 top-[calc(100%+0.35rem)] w-[min(18rem,calc(100vw-2rem))] p-3"
+          : kind === "frequency"
+            ? "left-8 top-0 w-10 p-1"
+            : "left-8 top-0 w-8 p-1"
       }`}
       draggable={false}
       onClick={(event) => event.stopPropagation()}
@@ -1059,7 +1077,7 @@ function SongInlineEditor({
           {[1, 2, 3, 4, 5].map((value) => (
             <button
               aria-pressed={frequency === value}
-              className={`h-8 w-full rounded-lg border text-xs font-semibold transition ${
+              className={`h-8 w-full rounded-lg border px-1.5 text-xs font-semibold transition ${
                 frequency === value
                   ? "border-[var(--accent)] bg-accent-soft text-accent-strong"
                   : "border-transparent text-zinc-300 hover:bg-white/5 hover:text-white"
@@ -1079,7 +1097,7 @@ function SongInlineEditor({
           {Array.from({ length: 5 }, (_, index) => index + 1).map((value) => (
             <button
               aria-pressed={metadata.rating === value}
-              className={`h-8 w-full rounded-lg border text-xs font-semibold transition ${
+              className={`h-8 w-full rounded-lg border px-1.5 text-xs font-semibold transition ${
                 metadata.rating === value
                   ? "border-[var(--accent)] bg-accent-soft text-accent-strong"
                   : "border-transparent text-zinc-300 hover:bg-white/5 hover:text-white"
@@ -1088,7 +1106,7 @@ function SongInlineEditor({
               onClick={() => onSaveRating(value)}
               type="button"
             >
-              {value}★
+              {value}
             </button>
           ))}
         </div>
@@ -1100,10 +1118,10 @@ function SongInlineEditor({
             <div className="flex flex-wrap gap-1.5">
               {keywords.map((keyword) => (
                 <span
-                  className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-semibold text-accent-strong"
+                  className="group/tag relative inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-semibold text-accent-strong"
                   key={keyword.name}
                 >
-                  {keyword.name} {keyword.rating}/10
+                  {keyword.name}
                   <button
                     aria-label={`Remove ${keyword.name}`}
                     className="rounded-full hover:text-red-400"
@@ -1118,6 +1136,9 @@ function SongInlineEditor({
                   >
                     <X aria-hidden="true" className="h-3 w-3" />
                   </button>
+                  <span className="pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] px-2 py-1 text-[9px] text-zinc-200 shadow-lg group-hover/tag:block">
+                    {keyword.rating}/10 match
+                  </span>
                 </span>
               ))}
             </div>
@@ -1130,13 +1151,15 @@ function SongInlineEditor({
             <input
               aria-label="Tag name"
               className="h-9 min-w-0 rounded-lg border border-[var(--app-sidebar-border)] bg-white/5 px-2.5 text-xs text-white outline-none placeholder:text-zinc-500 focus:border-accent"
+              disabled={atTagLimit}
               onChange={(event) => setTagName(event.target.value)}
-              placeholder={'e.g. "Pop"'}
+              placeholder={atTagLimit ? "3 tag limit reached" : 'e.g. "Pop"'}
               value={tagName}
             />
             <select
               aria-label="Tag match"
               className="h-9 rounded-lg border border-[var(--app-sidebar-border)] bg-white/5 px-1 text-xs text-white outline-none focus:border-accent"
+              disabled={atTagLimit}
               onChange={(event) => setTagRating(Number(event.target.value))}
               value={tagRating}
             >
@@ -1151,13 +1174,14 @@ function SongInlineEditor({
             <button
               aria-label="Add tag"
               className="flex h-9 items-center justify-center rounded-lg border border-[var(--app-sidebar-border)] text-zinc-400 transition hover:border-accent hover:text-accent-strong"
+              disabled={atTagLimit}
               type="submit"
             >
               <Plus aria-hidden="true" className="h-4 w-4" />
             </button>
           </form>
 
-          {unusedSuggestions.length > 0 ? (
+          {!atTagLimit && unusedSuggestions.length > 0 ? (
             <div>
               <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
                 Previously used
@@ -1176,6 +1200,9 @@ function SongInlineEditor({
               </div>
             </div>
           ) : null}
+          <p className="text-right text-[10px] text-zinc-500">
+            {keywords.length}/3 tags
+          </p>
           <button
             className="h-9 w-full rounded-lg border border-[var(--accent)] bg-accent-soft text-xs font-semibold text-accent-strong transition hover:bg-[var(--accent)] hover:text-black"
             onClick={() => onSaveTags(keywords)}
