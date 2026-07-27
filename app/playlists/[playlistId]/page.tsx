@@ -137,7 +137,7 @@ export default function PlaylistDetailPage() {
     return (
       <section className="mx-auto w-full max-w-5xl space-y-5">
         <BackButton onClick={() => router.push("/playlists")} />
-        <div className="rounded-2xl border border-dashed border-zinc-300 bg-white/70 p-10 text-center dark:border-white/10 dark:bg-neutral-900/70">
+        <div className="theme-card rounded-xl border-dashed p-8 text-center">
           <h1 className="text-2xl font-bold text-zinc-950 dark:text-white">
             Playlist not found
           </h1>
@@ -318,7 +318,7 @@ export default function PlaylistDetailPage() {
           <div className="flex min-w-0 items-center gap-4">
             <button
               aria-label={`Play ${playlist.name}`}
-              className="group relative h-20 w-32 shrink-0 overflow-hidden rounded-xl border border-zinc-200 shadow-sm transition focus:outline-none focus-visible:border-accent focus-visible:ring-4 focus-visible:ring-[var(--accent-ring)] disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 sm:h-24 sm:w-40"
+              className="media-on-dark group relative h-20 w-32 shrink-0 overflow-hidden rounded-xl border border-zinc-200 shadow-sm transition focus:outline-none focus-visible:border-accent focus-visible:ring-4 focus-visible:ring-[var(--accent-ring)] disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 sm:h-24 sm:w-40"
               disabled={playlist.videos.length === 0}
               onClick={() => playFrom()}
               type="button"
@@ -385,7 +385,7 @@ export default function PlaylistDetailPage() {
             </button>
           </div>
         </div>
-        <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 rounded-xl border border-zinc-200 bg-white/60 px-4 py-3 text-xs text-zinc-500 dark:border-white/10 dark:bg-white/[0.025] dark:text-zinc-400">
+        <div className="theme-panel mt-5 flex flex-wrap gap-x-5 gap-y-2 rounded-xl px-4 py-3 text-xs text-zinc-500 dark:text-zinc-400">
           <span className="inline-flex items-center gap-2">
             <CalendarClock aria-hidden="true" className="h-4 w-4" />
             {playlist.source === "imported"
@@ -425,7 +425,7 @@ export default function PlaylistDetailPage() {
       />
 
       {playlist.videos.length > 0 ? (
-        <div className="overflow-visible rounded-2xl border border-zinc-200 bg-white/85 shadow-sm backdrop-blur dark:border-white/10 dark:bg-neutral-900/85">
+        <div className="theme-card overflow-visible rounded-xl shadow-sm backdrop-blur">
           <div className="flex items-center justify-between gap-2 border-b border-zinc-200 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400 dark:border-white/10 2xl:hidden">
             <SortButton
               active={sort?.key === "song"}
@@ -571,7 +571,7 @@ export default function PlaylistDetailPage() {
                 </label>
                 <button
                   aria-label={`Play ${video.title}`}
-                  className="group relative h-12 w-20 shrink-0 overflow-hidden rounded-lg sm:h-14 sm:w-24"
+                  className="media-on-dark group relative h-12 w-20 shrink-0 overflow-hidden rounded-lg sm:h-14 sm:w-24"
                   onClick={() => playFrom(video.id)}
                   type="button"
                 >
@@ -735,7 +735,7 @@ export default function PlaylistDetailPage() {
           })}
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-zinc-300 bg-white/60 p-10 text-center dark:border-white/10 dark:bg-neutral-900/60">
+        <div className="theme-card rounded-xl border-dashed p-8 text-center">
           <h2 className="text-xl font-bold text-zinc-950 dark:text-white">
             This playlist is empty
           </h2>
@@ -831,7 +831,7 @@ export default function PlaylistDetailPage() {
 
       {undoRemoval ? (
         <div
-          className="fixed bottom-24 left-1/2 z-[90] flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center gap-4 rounded-xl border border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] px-4 py-3 text-sm text-zinc-200 shadow-2xl backdrop-blur-xl"
+          className="theme-control fixed bottom-24 left-1/2 z-[90] flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center gap-4 rounded-xl px-4 py-3 text-sm shadow-2xl backdrop-blur-xl"
           role="status"
         >
           <span className="min-w-0 flex-1">
@@ -986,7 +986,7 @@ function TagSortControl({
       {open ? (
         <div
           aria-label="Tags used in this playlist"
-          className="absolute right-0 top-[calc(100%+0.4rem)] z-[80] w-44 overflow-hidden rounded-xl border border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] p-1.5 text-left normal-case tracking-normal shadow-2xl backdrop-blur-xl"
+          className="theme-menu absolute right-0 top-[calc(100%+0.4rem)] z-[80] w-44 overflow-hidden rounded-xl p-1.5 text-left normal-case tracking-normal backdrop-blur-xl"
           role="listbox"
         >
           <p className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
@@ -1109,15 +1109,17 @@ function TagPills({
           selectedTag?.toLocaleLowerCase();
         return (
           <span
+            aria-label={`${keyword.name}, ${keyword.rating} out of 10 match`}
             className={`group/tag relative inline-flex min-h-5 max-w-28 items-center justify-center rounded-full px-2 py-0.5 text-center text-xs font-semibold leading-none ${
               highlighted
                 ? "bg-accent-soft text-accent-strong"
                 : "bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/[0.06] dark:text-zinc-400 dark:ring-white/10"
             }`}
             key={keyword.name}
+            tabIndex={0}
           >
             <span className="truncate">{keyword.name.slice(0, 12)}</span>
-            <span className="pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden h-6 -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-md border border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] px-2 text-[9px] leading-none text-zinc-200 shadow-lg group-hover/tag:flex">
+            <span className="theme-tooltip pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden h-6 -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-md px-2 text-[9px] leading-none shadow-lg group-hover/tag:flex group-focus/tag:flex">
               {keyword.rating}/10
             </span>
           </span>
@@ -1149,7 +1151,7 @@ function BulkToolbar({
   onToggleAll: () => void;
 }) {
   return (
-    <div className="sticky top-16 z-20 flex flex-wrap items-center gap-2 rounded-xl border border-zinc-200 bg-white/95 p-2.5 shadow-lg backdrop-blur dark:border-[var(--app-sidebar-border)] dark:bg-[var(--app-control-bg)] lg:top-3">
+    <div className="theme-control sticky top-16 z-20 flex flex-wrap items-center gap-2 rounded-xl p-2.5 shadow-lg backdrop-blur lg:top-3">
       <button
         className="inline-flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-white/5"
         onClick={onToggleAll}
@@ -1244,10 +1246,15 @@ function SongMenu({
   video: VideoItem;
 }) {
   return (
-    <div className="absolute right-0 top-11 z-30 w-72 rounded-xl border border-zinc-200 bg-white p-2 shadow-2xl dark:border-[var(--app-sidebar-border)] dark:bg-[var(--app-control-bg)] dark:backdrop-blur-xl">
+    <div
+      aria-label="Song actions"
+      className="theme-menu absolute right-0 top-11 z-30 w-72 rounded-xl p-2 backdrop-blur-xl"
+      role="menu"
+    >
       <button
         className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-700 transition hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-white/5"
         onClick={onCopy}
+        role="menuitem"
         type="button"
       >
         <Copy aria-hidden="true" className="h-4 w-4" />
@@ -1256,6 +1263,7 @@ function SongMenu({
       <button
         className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-700 transition hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-white/5"
         onClick={onMove}
+        role="menuitem"
         type="button"
       >
         <MoveRight aria-hidden="true" className="h-4 w-4" />
@@ -1282,6 +1290,7 @@ function SongMenu({
       <button
         className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-red-500 transition hover:bg-red-500/10"
         onClick={onRemove}
+        role="menuitem"
         type="button"
       >
         <Trash2 aria-hidden="true" className="h-4 w-4" />
@@ -1314,7 +1323,7 @@ function TrimField({
         {label}
       </span>
       <input
-        className="h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 text-xs outline-none focus:border-accent dark:border-[var(--app-sidebar-border)] dark:bg-white/5"
+        className="theme-field h-9 w-full rounded-lg px-2 text-xs"
         defaultValue={formatTime(value)}
         onBlur={(event) => onChange(parseTime(event.target.value))}
         placeholder="00:00"
@@ -1379,7 +1388,7 @@ function SongInlineEditor({
 
   return (
     <div
-      className={`absolute z-50 overflow-hidden rounded-xl border border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] text-left shadow-2xl backdrop-blur-xl ${
+      className={`theme-menu absolute z-50 overflow-hidden rounded-xl text-left backdrop-blur-xl ${
         kind === "tags"
           ? "right-0 top-[calc(100%+0.35rem)] w-[min(18rem,calc(100vw-2rem))] p-3"
           : kind === "frequency"
@@ -1470,7 +1479,7 @@ function SongInlineEditor({
                   >
                     <X aria-hidden="true" className="h-3 w-3" />
                   </button>
-                  <span className="pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden h-6 -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-md border border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] px-2 text-[9px] leading-none text-zinc-200 shadow-lg group-hover/tag:flex">
+                  <span className="theme-tooltip pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden h-6 -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-md px-2 text-[9px] leading-none shadow-lg group-hover/tag:flex group-focus-within/tag:flex">
                     {keyword.rating}/10
                   </span>
                 </span>
@@ -1487,7 +1496,7 @@ function SongInlineEditor({
           >
             <input
               aria-label="Tag name"
-              className="h-9 min-w-0 rounded-lg border border-[var(--app-sidebar-border)] bg-white/5 px-2.5 text-xs text-white outline-none placeholder:text-zinc-500 focus:border-accent"
+              className="theme-field h-9 min-w-0 rounded-lg px-2.5 text-xs"
               disabled={atTagLimit}
               maxLength={12}
               onChange={(event) => setTagName(event.target.value.slice(0, 12))}
@@ -1496,7 +1505,7 @@ function SongInlineEditor({
             />
             <select
               aria-label="Tag match"
-              className="h-9 rounded-lg border border-[var(--app-sidebar-border)] bg-white/5 px-1 text-xs text-white outline-none focus:border-accent"
+              className="theme-field h-9 rounded-lg px-1 text-xs"
               disabled={atTagLimit}
               onChange={(event) => setTagRating(Number(event.target.value))}
               value={tagRating}
@@ -1628,13 +1637,13 @@ function TransferDialog({
         onSubmit={createAndSelect}
       >
         <input
-          className="h-10 min-w-0 flex-1 rounded-lg border border-[var(--app-sidebar-border)] bg-white/5 px-3 text-sm text-white outline-none focus:border-accent"
+          className="theme-field h-10 min-w-0 flex-1 rounded-lg px-3 text-sm"
           onChange={(event) => setNewName(event.target.value)}
           placeholder="Create a new playlist"
           value={newName}
         />
         <button
-          className="h-10 rounded-lg border border-[var(--app-sidebar-border)] px-3 text-sm font-semibold text-zinc-300 transition hover:border-accent hover:bg-white/5 hover:text-accent-strong"
+          className="theme-button-secondary h-10 rounded-lg px-3 text-sm font-semibold transition"
           type="submit"
         >
           Create
@@ -1642,14 +1651,14 @@ function TransferDialog({
       </form>
       <div className="mt-6 flex gap-3">
         <button
-          className="h-11 flex-1 rounded-xl border border-[var(--app-sidebar-border)] text-sm font-semibold text-zinc-300 transition hover:bg-white/5"
+          className="theme-button-secondary h-10 flex-1 rounded-lg text-sm font-semibold transition"
           onClick={onClose}
           type="button"
         >
           Cancel
         </button>
         <button
-          className="h-11 flex-1 rounded-xl border border-[var(--accent)] bg-accent-soft text-sm font-semibold text-accent-strong transition hover:bg-[var(--accent)] hover:text-black disabled:opacity-40"
+          className="theme-button-primary h-10 flex-1 rounded-lg text-sm font-semibold transition disabled:opacity-40"
           disabled={!selectedId}
           onClick={() => selectedId && onSubmit(selectedId)}
           type="button"
@@ -1721,7 +1730,7 @@ function BulkMetadataDialog({
         </p>
         <div className="mt-3 grid grid-cols-[minmax(0,1fr)_6rem] gap-2">
           <input
-            className="h-10 rounded-lg border border-[var(--app-sidebar-border)] bg-white/5 px-3 text-sm text-white outline-none focus:border-accent"
+            className="theme-field h-10 rounded-lg px-3 text-sm"
             list="curatore-bulk-tag-suggestions"
             maxLength={12}
             onChange={(event) => setTagName(event.target.value.slice(0, 12))}
@@ -1730,7 +1739,7 @@ function BulkMetadataDialog({
           />
           <select
             aria-label="Tag match"
-            className="h-10 rounded-lg border border-[var(--app-sidebar-border)] bg-white/5 px-2 text-sm text-white outline-none focus:border-accent"
+            className="theme-field h-10 rounded-lg px-2 text-sm"
             onChange={(event) => setTagRating(Number(event.target.value))}
             value={tagRating}
           >
@@ -1751,14 +1760,14 @@ function BulkMetadataDialog({
       </div>
       <div className="mt-7 flex gap-3">
         <button
-          className="h-11 flex-1 rounded-xl border border-[var(--app-sidebar-border)] text-sm font-semibold text-zinc-300 transition hover:bg-white/5"
+          className="theme-button-secondary h-10 flex-1 rounded-lg text-sm font-semibold transition"
           onClick={onClose}
           type="button"
         >
           Cancel
         </button>
         <button
-          className="h-11 flex-1 rounded-xl border border-[var(--accent)] bg-accent-soft text-sm font-semibold text-accent-strong transition hover:bg-[var(--accent)] hover:text-black disabled:opacity-40"
+          className="theme-button-primary h-10 flex-1 rounded-lg text-sm font-semibold transition disabled:opacity-40"
           disabled={!hasChanges}
           onClick={() =>
             onSave({
@@ -1795,7 +1804,7 @@ function SelectField({
     <label className="space-y-2">
       <span className="text-sm font-semibold text-zinc-200">{label}</span>
       <select
-        className="h-11 w-full rounded-lg border border-[var(--app-sidebar-border)] bg-white/5 px-3 text-sm text-white outline-none focus:border-accent"
+        className="theme-field h-10 w-full rounded-lg px-3 text-sm"
         onChange={(event) => onChange(event.target.value)}
         value={value}
       >
@@ -1833,21 +1842,21 @@ function RenamePlaylistDialog({
         </span>
         <input
           autoFocus
-          className="h-11 w-full rounded-lg border border-[var(--app-sidebar-border)] bg-white/5 px-3 text-white outline-none focus:border-accent"
+          className="theme-field h-10 w-full rounded-lg px-3 text-sm"
           onChange={(event) => setName(event.target.value)}
           value={name}
         />
       </label>
       <div className="mt-7 flex gap-3">
         <button
-          className="h-11 flex-1 rounded-xl border border-[var(--app-sidebar-border)] text-sm font-semibold text-zinc-300 transition hover:bg-white/5"
+          className="theme-button-secondary h-10 flex-1 rounded-lg text-sm font-semibold transition"
           onClick={onCancel}
           type="button"
         >
           Cancel
         </button>
         <button
-          className="h-11 flex-1 rounded-xl border border-[var(--accent)] bg-accent-soft text-sm font-semibold text-accent-strong transition hover:bg-[var(--accent)] hover:text-black disabled:opacity-40"
+          className="theme-button-primary h-10 flex-1 rounded-lg text-sm font-semibold transition disabled:opacity-40"
           disabled={!name.trim() || name.trim() === initialName}
           onClick={() => onConfirm(name)}
           type="button"
@@ -1883,14 +1892,14 @@ function DeletePlaylistDialog({
       </p>
       <div className="mt-7 flex gap-3">
         <button
-          className="h-11 flex-1 rounded-xl border border-[var(--app-sidebar-border)] text-sm font-semibold text-zinc-300 transition hover:bg-white/5"
+          className="theme-button-secondary h-10 flex-1 rounded-lg text-sm font-semibold transition"
           onClick={onCancel}
           type="button"
         >
           Cancel
         </button>
         <button
-          className="h-11 flex-1 rounded-xl bg-red-500 text-sm font-semibold text-white transition hover:bg-red-400"
+          className="theme-destructive-solid h-10 flex-1 rounded-lg text-sm font-semibold transition"
           onClick={onConfirm}
           type="button"
         >
@@ -1924,14 +1933,14 @@ function ConfirmRemoveDialog({
       </p>
       <div className="mt-7 flex gap-3">
         <button
-          className="h-11 flex-1 rounded-xl border border-[var(--app-sidebar-border)] text-sm font-semibold text-zinc-300 transition hover:bg-white/5"
+          className="theme-button-secondary h-10 flex-1 rounded-lg text-sm font-semibold transition"
           onClick={onCancel}
           type="button"
         >
           Cancel
         </button>
         <button
-          className="h-11 flex-1 rounded-xl bg-red-500 text-sm font-semibold text-white transition hover:bg-red-400"
+          className="theme-destructive-solid h-10 flex-1 rounded-lg text-sm font-semibold transition"
           onClick={onConfirm}
           type="button"
         >
@@ -1951,12 +1960,12 @@ function Modal({
 }) {
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+      className="theme-overlay fixed inset-0 z-[80] flex items-center justify-center p-4 backdrop-blur-sm"
       role="presentation"
     >
       <div
         aria-modal="true"
-        className="relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] p-6 shadow-2xl backdrop-blur-xl"
+        className="theme-dialog relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-xl p-5 backdrop-blur-xl sm:p-6"
         role="dialog"
       >
         <button

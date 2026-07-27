@@ -31,7 +31,7 @@ export default function PlayerPage() {
               value={selectedPlaylist?.name ?? "No playlist selected"}
             />
           </div>
-          <div className="shrink-0 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm text-zinc-600 shadow-sm dark:border-white/10 dark:bg-neutral-900 dark:text-zinc-300">
+          <div className="theme-control shrink-0 rounded-full px-4 py-2 text-sm shadow-sm">
             {queue.length} {queue.length === 1 ? "video" : "videos"} in queue
           </div>
         </div>
@@ -50,7 +50,7 @@ function InfoCard({
   value: string;
 }) {
   return (
-    <div className="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2.5 shadow-sm dark:border-white/10 dark:bg-neutral-900">
+    <div className="theme-panel flex min-w-0 items-center justify-between gap-3 rounded-lg px-3 py-2.5 shadow-sm">
       <div className="min-w-0">
         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
           {label}

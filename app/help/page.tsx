@@ -17,7 +17,7 @@ export default function HelpCenterPage() {
       </header>
 
       <Link
-        className="group flex max-w-2xl items-center gap-4 rounded-2xl border border-zinc-200 bg-white/90 p-5 shadow-sm backdrop-blur transition hover:border-accent dark:border-[var(--app-sidebar-border)] dark:bg-[var(--app-control-bg)] sm:p-6"
+        className="theme-card group flex max-w-2xl items-center gap-4 rounded-xl p-4 backdrop-blur transition hover:border-accent sm:p-5"
         href="/help/playlist-sorting"
       >
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-strong">

@@ -9,10 +9,8 @@ import { GlobalPlayerControls } from "@/components/GlobalPlayerControls";
 import { LeftSidebar } from "@/components/LeftSidebar";
 import { RightQueueSidebar } from "@/components/RightQueueSidebar";
 import { YoutubePlayer } from "@/components/YoutubePlayer";
-import { applyAccent } from "@/lib/accent";
-import { applyBackground } from "@/lib/background";
+import { applyAppearance } from "@/lib/background";
 import {
-  readStoredAccent,
   readStoredBackground,
   readStoredTheme
 } from "@/lib/storage";
@@ -29,9 +27,19 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const storedTheme = readStoredTheme() ?? "dark";
-    document.documentElement.classList.toggle("dark", storedTheme === "dark");
-    applyAccent(readStoredAccent() ?? "cyan");
-    applyBackground(readStoredBackground());
+    const storedBackground = readStoredBackground();
+    const updateAppearance = () =>
+      applyAppearance(storedTheme, storedBackground);
+
+    updateAppearance();
+
+    if (storedTheme !== "system") {
+      return;
+    }
+
+    const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
+    systemTheme.addEventListener("change", updateAppearance);
+    return () => systemTheme.removeEventListener("change", updateAppearance);
   }, []);
 
   useEffect(() => {
@@ -135,7 +143,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div
-      className="min-h-screen bg-[var(--app-background-color)] bg-cover bg-center bg-fixed text-zinc-950 dark:text-zinc-50"
+      className="min-h-screen bg-[var(--theme-background)] bg-cover bg-center bg-fixed text-[var(--theme-text)]"
       onTouchEnd={handleTouchEnd}
       onTouchStart={handleTouchStart}
       style={{ backgroundImage: "var(--app-background-image)" }}
@@ -179,7 +187,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {mobilePanel ? (
         <button
           aria-label="Close open sidebar"
-          className="fixed inset-0 z-[35] bg-black/65 backdrop-blur-[2px] lg:hidden"
+          className="fixed inset-0 z-[35] bg-[var(--theme-overlay)] backdrop-blur-[2px] lg:hidden"
           onClick={() => setMobilePanel(null)}
           type="button"
         />

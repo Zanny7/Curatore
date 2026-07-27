@@ -1,43 +1,24 @@
 import type {
-  AccentPreference,
   BackgroundPreference,
   BackgroundThemeId,
   Playlist,
   SongMetadata,
   ThemePreference
 } from "@/types";
+import { BACKGROUND_THEME_IDS } from "@/lib/background";
 
 const IMPORTED_PLAYLISTS_KEY = "curatore.importedPlaylists";
 const CURATED_PLAYLISTS_KEY = "curatore.curatedPlaylists";
 const SONG_METADATA_KEY = "curatore.songMetadata";
 const THEME_KEY = "curatore.theme";
-const ACCENT_KEY = "curatore.accent";
 const BACKGROUND_KEY = "curatore.background";
 const LEGACY_IMPORTED_PLAYLISTS_KEY = "ontrack.importedPlaylists";
 const LEGACY_THEME_KEY = "ontrack.theme";
-const LEGACY_ACCENT_KEY = "ontrack.accent";
 const LEGACY_BACKGROUND_KEY = "ontrack.background";
 export const DEFAULT_BACKGROUND: BackgroundPreference = {
   mode: "theme",
   theme: "midnight"
 };
-const BACKGROUND_THEMES: BackgroundThemeId[] = [
-  "midnight",
-  "graphite",
-  "deepSea",
-  "forest",
-  "plum",
-  "ember"
-];
-const ACCENTS: AccentPreference[] = [
-  "cyan",
-  "emerald",
-  "violet",
-  "rose",
-  "amber",
-  "slate"
-];
-
 function canUseStorage() {
   return typeof window !== "undefined" && "localStorage" in window;
 }
@@ -146,7 +127,9 @@ export function readStoredTheme(): ThemePreference | null {
   }
 
   const value = readStoredValue(THEME_KEY, LEGACY_THEME_KEY);
-  return value === "light" || value === "dark" ? value : null;
+  return value === "system" || value === "light" || value === "dark"
+    ? value
+    : null;
 }
 
 export function writeStoredTheme(theme: ThemePreference) {
@@ -157,25 +140,6 @@ export function writeStoredTheme(theme: ThemePreference) {
   window.localStorage.setItem(THEME_KEY, theme);
 }
 
-export function readStoredAccent(): AccentPreference | null {
-  if (!canUseStorage()) {
-    return null;
-  }
-
-  const value = readStoredValue(ACCENT_KEY, LEGACY_ACCENT_KEY);
-  return ACCENTS.includes(value as AccentPreference)
-    ? (value as AccentPreference)
-    : null;
-}
-
-export function writeStoredAccent(accent: AccentPreference) {
-  if (!canUseStorage()) {
-    return;
-  }
-
-  window.localStorage.setItem(ACCENT_KEY, accent);
-}
-
 function isBackgroundPreference(value: unknown): value is BackgroundPreference {
   if (!value || typeof value !== "object") {
     return false;
@@ -183,7 +147,7 @@ function isBackgroundPreference(value: unknown): value is BackgroundPreference {
 
   const background = value as Partial<BackgroundPreference>;
   const hasValidMode = background.mode === "theme" || background.mode === "image";
-  const hasValidTheme = BACKGROUND_THEMES.includes(
+  const hasValidTheme = BACKGROUND_THEME_IDS.includes(
     background.theme as BackgroundThemeId
   );
   const hasValidImage =

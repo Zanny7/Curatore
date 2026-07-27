@@ -4,6 +4,10 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import { AppShell } from "@/components/AppShell";
 import { PlayerProvider } from "@/context/PlayerContext";
+import {
+  createThemeBootstrapScript,
+  createThemeStyleSheet
+} from "@/lib/background";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -17,8 +21,26 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} bg-zinc-100 font-sans text-zinc-950 antialiased dark:bg-neutral-950 dark:text-zinc-50`}>
+    <html
+      data-curatore-theme="true"
+      data-mode="dark"
+      data-shell-theme="midnight"
+      lang="en"
+      suppressHydrationWarning
+    >
+      <head>
+        <style
+          dangerouslySetInnerHTML={{ __html: createThemeStyleSheet() }}
+          id="curatore-theme-tokens"
+        />
+        <script
+          dangerouslySetInnerHTML={{ __html: createThemeBootstrapScript() }}
+          id="curatore-theme-bootstrap"
+        />
+      </head>
+      <body
+        className={`${inter.variable} bg-[var(--theme-background)] font-sans text-[var(--theme-text)] antialiased`}
+      >
         <PlayerProvider>
           <AppShell>{children}</AppShell>
         </PlayerProvider>

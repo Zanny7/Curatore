@@ -59,7 +59,7 @@ export default function PlaylistSortingHelpPage() {
             <strong>two extra plays</strong>—not three.
           </p>
 
-          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-[var(--app-sidebar-border)] dark:bg-white/[0.035]">
+          <div className="theme-panel rounded-xl p-4">
             <div className="flex items-center gap-2 font-semibold text-zinc-800 dark:text-zinc-100">
               <Info aria-hidden="true" className="h-4 w-4 text-accent-strong" />
               Example
@@ -108,8 +108,8 @@ function HelpSection({
   title: string;
 }) {
   return (
-    <details className="group rounded-2xl border border-zinc-200 bg-white/90 shadow-sm backdrop-blur transition open:border-zinc-300 dark:border-[var(--app-sidebar-border)] dark:bg-[var(--app-control-bg)] dark:open:border-white/20">
-      <summary className="flex cursor-pointer select-none list-none items-center gap-3 rounded-2xl p-5 outline-none transition hover:bg-zinc-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)] group-open:rounded-b-none group-open:hover:bg-transparent group-open:focus-visible:ring-0 dark:hover:bg-white/[0.035] dark:group-open:hover:bg-transparent sm:px-7 [&::-webkit-details-marker]:hidden">
+    <details className="theme-card group rounded-xl backdrop-blur transition open:border-[var(--theme-border-strong)]">
+      <summary className="flex cursor-pointer select-none list-none items-center gap-3 rounded-xl p-4 outline-none transition hover:bg-[var(--theme-surface-hover)] group-open:rounded-b-none group-open:hover:bg-transparent sm:px-5 [&::-webkit-details-marker]:hidden">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-strong">
           {icon}
         </span>
@@ -121,7 +121,7 @@ function HelpSection({
           className="h-5 w-5 shrink-0 text-zinc-400 transition duration-200 group-open:rotate-180"
         />
       </summary>
-      <div className="mx-5 mt-1 border-t border-zinc-200 pb-6 pt-5 dark:border-[var(--app-sidebar-border)] sm:mx-7">
+      <div className="mx-4 mt-1 border-t border-[var(--theme-border)] pb-5 pt-4 sm:mx-5">
         <div className="max-w-3xl space-y-4 text-sm leading-7 text-zinc-600 dark:text-zinc-300 sm:text-base">
           {children}
         </div>

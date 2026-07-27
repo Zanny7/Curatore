@@ -27,7 +27,7 @@ export function ComingSoonPage({
         {description}
       </p>
       <Link
-        className="mt-8 inline-flex items-center justify-center rounded-xl border border-zinc-950 px-5 py-3 font-semibold text-zinc-950 transition hover:border-accent hover:text-accent-strong active:text-accent-strong dark:border-white dark:text-white"
+        className="theme-button-secondary mt-8 inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold transition"
         href="/playlists"
       >
         Browse playlists

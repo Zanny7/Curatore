@@ -1,4 +1,4 @@
-export type ThemePreference = "light" | "dark";
+export type ThemePreference = "system" | "light" | "dark";
 
 export type BackgroundThemeId =
   | "midnight"
@@ -6,21 +6,19 @@ export type BackgroundThemeId =
   | "deepSea"
   | "forest"
   | "plum"
-  | "ember";
+  | "ember"
+  | "polarNight"
+  | "rosewoodGold"
+  | "mossLinen"
+  | "cobaltTangerine"
+  | "lavenderSteel"
+  | "sepiaTeal";
 
 export type BackgroundPreference = {
   mode: "theme" | "image";
   theme: BackgroundThemeId;
   imageDataUrl?: string;
 };
-
-export type AccentPreference =
-  | "cyan"
-  | "emerald"
-  | "violet"
-  | "rose"
-  | "amber"
-  | "slate";
 
 export type VideoItem = {
   id: string;

@@ -113,9 +113,9 @@ export default function PlaylistsPage() {
   }
 
   return (
-    <section className="space-y-8">
-      <div className="flex flex-col gap-6">
-        <div className="inline-flex w-fit rounded-xl border border-zinc-200 bg-white/80 p-1 shadow-sm backdrop-blur dark:border-white/10 dark:bg-neutral-900/85">
+    <section className="space-y-6">
+      <div className="flex flex-col gap-5">
+        <div className="theme-control inline-flex w-fit rounded-lg p-1 shadow-sm backdrop-blur">
           <ViewButton
             active={view === "curated"}
             count={curatedPlaylists.length}
@@ -145,7 +145,7 @@ export default function PlaylistsPage() {
             </p>
           </div>
           <button
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-950 bg-zinc-950 px-5 py-3 font-semibold text-white shadow-sm transition hover:border-accent hover:bg-transparent hover:text-accent-strong dark:border-white dark:bg-white dark:text-zinc-950 dark:hover:border-accent dark:hover:bg-transparent dark:hover:text-accent-strong"
+            className="theme-button-primary inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold shadow-sm transition"
             onClick={() =>
               view === "curated"
                 ? setShowCreate(true)
@@ -165,7 +165,7 @@ export default function PlaylistsPage() {
 
       {view === "imported" && showImport ? (
         <form
-          className="rounded-2xl border border-zinc-200 bg-white/90 p-5 shadow-lg backdrop-blur dark:border-white/10 dark:bg-neutral-900/90"
+          className="theme-card rounded-xl p-4 shadow-lg backdrop-blur sm:p-5"
           onSubmit={importPlaylist}
         >
           <div className="mb-5 flex items-start justify-between gap-4">
@@ -203,7 +203,7 @@ export default function PlaylistsPage() {
               value={url}
             />
             <button
-              className="mt-auto inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-zinc-950 px-5 font-semibold text-zinc-950 transition hover:border-accent hover:text-accent-strong disabled:opacity-50 dark:border-white dark:text-white"
+            className="theme-button-primary mt-auto inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition disabled:opacity-50"
               disabled={submitting}
               type="submit"
             >
@@ -244,12 +244,14 @@ export default function PlaylistsPage() {
 
       {showCreate ? (
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          className="theme-overlay fixed inset-0 z-[70] flex items-center justify-center p-4 backdrop-blur-sm"
           role="presentation"
         >
           <form
-            className="w-full max-w-md rounded-2xl border border-white/10 bg-neutral-950 p-6 shadow-2xl"
+            aria-label="Create playlist"
+            className="theme-dialog w-full max-w-md rounded-xl p-5"
             onSubmit={createPlaylist}
+            role="dialog"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -275,14 +277,14 @@ export default function PlaylistsPage() {
               </span>
               <input
                 autoFocus
-                className="accent-ring h-12 w-full rounded-xl border border-white/10 bg-neutral-900 px-4 text-white outline-none"
+                className="theme-field h-10 w-full rounded-lg px-3 text-sm"
                 onChange={(event) => setPlaylistName(event.target.value)}
                 placeholder="My new playlist"
                 value={playlistName}
               />
             </label>
             <button
-              className="mt-5 inline-flex h-12 w-full items-center justify-center rounded-xl bg-white font-semibold text-zinc-950 transition hover:bg-[var(--accent)]"
+              className="theme-button-primary mt-4 inline-flex h-10 w-full items-center justify-center rounded-lg text-sm font-semibold transition"
               type="submit"
             >
               Create playlist
@@ -310,7 +312,7 @@ function ViewButton({
       aria-pressed={active}
       className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
         active
-          ? "bg-zinc-950 text-white shadow-sm dark:bg-white dark:text-zinc-950"
+          ? "bg-[var(--theme-accent)] text-[var(--theme-on-accent)] shadow-sm"
           : "text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
       }`}
       onClick={onClick}
@@ -347,7 +349,7 @@ function Field({
         {label}
       </span>
       <input
-        className="accent-ring h-12 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-4 text-zinc-950 outline-none transition dark:border-white/10 dark:bg-neutral-950 dark:text-white"
+        className="theme-field h-10 w-full rounded-lg px-3 text-sm transition"
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         type={type}
@@ -365,7 +367,7 @@ function EmptyState({
   onAction: () => void;
 }) {
   return (
-    <div className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-white/60 px-6 py-12 text-center shadow-sm backdrop-blur dark:border-white/10 dark:bg-neutral-900/60">
+    <div className="theme-card flex min-h-56 flex-col items-center justify-center rounded-xl border-dashed px-6 py-10 text-center shadow-sm backdrop-blur">
       <div className="bg-accent-soft text-accent flex h-14 w-14 items-center justify-center rounded-full">
         <ListMusic aria-hidden="true" className="h-7 w-7" />
       </div>
@@ -378,7 +380,7 @@ function EmptyState({
           : "Create a clean, personal collection and fill it with songs from your imports."}
       </p>
       <button
-        className="mt-6 rounded-xl border border-zinc-950 px-5 py-3 font-semibold text-zinc-950 transition hover:border-accent hover:text-accent-strong dark:border-white dark:text-white"
+        className="theme-button-secondary mt-5 h-10 rounded-lg px-4 text-sm font-semibold transition"
         onClick={onAction}
         type="button"
       >

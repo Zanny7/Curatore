@@ -13,7 +13,7 @@ export function PlaylistCard({ playlist, onOpen, onPlay }: PlaylistCardProps) {
   return (
     <article className="group min-w-0 text-left">
       <button
-        className="relative block aspect-video w-full overflow-hidden rounded-xl border border-zinc-200 bg-zinc-200 text-left shadow-sm transition duration-300 hover:-translate-y-1 hover:border-accent hover:shadow-xl dark:border-white/10 dark:bg-neutral-800"
+        className="media-on-dark relative block aspect-video w-full overflow-hidden rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface-subtle)] text-left shadow-sm transition duration-300 hover:-translate-y-1 hover:border-accent hover:shadow-xl"
         onClick={() => onOpen(playlist)}
         type="button"
       >
@@ -46,7 +46,7 @@ export function PlaylistCard({ playlist, onOpen, onPlay }: PlaylistCardProps) {
         </button>
         <button
           aria-label={`Play ${playlist.name}`}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-accent hover:text-accent-strong dark:border-white/10 dark:bg-neutral-900 dark:text-zinc-300"
+          className="theme-button-secondary flex h-9 w-9 shrink-0 items-center justify-center rounded-full shadow-sm transition"
           disabled={playlist.videos.length === 0}
           onClick={() => onPlay(playlist)}
           type="button"

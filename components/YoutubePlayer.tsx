@@ -375,7 +375,7 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
   ]);
 
   const shellClass = visible
-    ? "relative mx-auto aspect-video w-full max-w-5xl overflow-hidden rounded-2xl border border-zinc-200 bg-black shadow-sm dark:border-white/10"
+    ? "relative mx-auto aspect-video w-full max-w-5xl overflow-hidden rounded-2xl border border-[var(--theme-border)] bg-black shadow-sm"
     : "fixed -left-[200vw] top-0 h-[180px] w-[320px] overflow-hidden opacity-0 pointer-events-none";
 
   const enterFullscreen = useCallback(() => {
@@ -429,7 +429,7 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
           />
         </>
       ) : (
-        <div className="flex h-full w-full flex-col items-center justify-center bg-[radial-gradient(circle_at_center,var(--accent-soft),transparent_40%),linear-gradient(135deg,#09090b,#18181b)] px-4 py-3 text-center sm:px-6">
+        <div className="media-on-dark flex h-full w-full flex-col items-center justify-center bg-[radial-gradient(circle_at_center,var(--accent-soft),transparent_40%),linear-gradient(135deg,#09090b,#18181b)] px-4 py-3 text-center sm:px-6">
           <div className="text-accent mb-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 shadow-sm sm:mb-4 sm:h-16 sm:w-16 lg:h-20 lg:w-20">
             <PlayCircle aria-hidden="true" className="h-7 w-7 sm:h-9 sm:w-9 lg:h-11 lg:w-11" />
           </div>
