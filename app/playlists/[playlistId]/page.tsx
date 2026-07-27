@@ -10,6 +10,7 @@ import {
   ChevronDown,
   Copy,
   GripVertical,
+  Info,
   MoreHorizontal,
   MoveRight,
   Pencil,
@@ -24,6 +25,7 @@ import {
   Trash2,
   X
 } from "lucide-react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { usePlayer } from "@/context/PlayerContext";
@@ -431,12 +433,11 @@ export default function PlaylistDetailPage() {
               label="Song"
               onClick={() => toggleSort("song")}
             />
-            <SortButton
+            <FrequencySortControl
               active={sort?.key === "frequency"}
               direction={
                 sort?.key === "frequency" ? sort.direction : undefined
               }
-              label="Freq"
               onClick={() => toggleSort("frequency")}
             />
             <SortButton
@@ -467,13 +468,11 @@ export default function PlaylistDetailPage() {
               label="Song"
               onClick={() => toggleSort("song")}
             />
-            <SortButton
+            <FrequencySortControl
               active={sort?.key === "frequency"}
-              className="pl-2"
               direction={
                 sort?.key === "frequency" ? sort.direction : undefined
               }
-              label="Freq"
               onClick={() => toggleSort("frequency")}
             />
             <SortButton
@@ -865,6 +864,35 @@ function BackButton({ onClick }: { onClick: () => void }) {
       <ArrowLeft aria-hidden="true" className="h-4 w-4" />
       Back to playlists
     </button>
+  );
+}
+
+function FrequencySortControl({
+  active,
+  direction,
+  onClick
+}: {
+  active: boolean;
+  direction?: SortDirection;
+  onClick: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-0.5">
+      <Link
+        aria-label="Learn how play frequency works"
+        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-zinc-400 transition hover:bg-zinc-100 hover:text-accent-strong dark:hover:bg-white/5"
+        href="/help#frequency"
+        title="Learn how play frequency works"
+      >
+        <Info aria-hidden="true" className="h-3.5 w-3.5" />
+      </Link>
+      <SortButton
+        active={active}
+        direction={direction}
+        label="Freq"
+        onClick={onClick}
+      />
+    </div>
   );
 }
 

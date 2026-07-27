@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   ChevronLeft,
   ChevronRight,
+  CircleHelp,
   Heart,
   History,
   Library,
@@ -25,6 +26,10 @@ const upcomingItems = [
   { href: "/library", label: "Library", icon: Library },
   { href: "/favorites", label: "Favorites", icon: Heart },
   { href: "/history", label: "History", icon: History }
+];
+
+const resourceItems = [
+  { href: "/help", label: "Help Center", icon: CircleHelp }
 ];
 
 type LeftSidebarProps = {
@@ -136,6 +141,36 @@ export function LeftSidebar({
                         active
                           ? "border-accent text-accent-strong"
                           : "border-transparent text-zinc-500 hover:border-accent hover:text-accent-strong active:text-accent-strong"
+                      }`}
+                      href={href}
+                      key={href}
+                      onClick={onMobileClose}
+                    >
+                      <span className="flex h-6 w-6 items-center justify-center lg:h-5 lg:w-5">
+                        <Icon aria-hidden="true" className="h-5 w-5" />
+                      </span>
+                      <span>{label}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+
+            <div className="border-t border-[var(--app-sidebar-border)] py-4 lg:px-3">
+              <p className="pb-2 text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-400 lg:px-4 lg:text-left lg:text-xs">
+                Resources
+              </p>
+              <nav aria-label="Resources navigation">
+                {resourceItems.map(({ href, label, icon: Icon }) => {
+                  const active =
+                    pathname === href || pathname.startsWith(`${href}/`);
+
+                  return (
+                    <Link
+                      className={`mx-4 grid w-auto grid-cols-[1.5rem_minmax(0,1fr)] items-center gap-4 rounded-lg border-l-4 py-2.5 pl-[6.7px] pr-4 text-left text-sm font-medium transition lg:mx-0 lg:w-full lg:grid-cols-[1.25rem_minmax(0,1fr)] lg:gap-3 lg:px-4 lg:py-3 lg:text-base ${
+                        active
+                          ? "border-accent text-accent-strong"
+                          : "border-transparent text-zinc-400 hover:border-accent hover:text-accent-strong active:text-accent-strong"
                       }`}
                       href={href}
                       key={href}
