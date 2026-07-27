@@ -931,8 +931,8 @@ function TagSortControl({
         }
         className={`flex h-6 min-w-6 max-w-20 items-center justify-center gap-0.5 rounded-md border px-1 text-[10px] normal-case tracking-normal transition ${
           selectedTag
-            ? "border-accent bg-accent-soft text-accent-strong"
-            : "border-zinc-200 text-zinc-400 hover:border-accent hover:text-accent-strong dark:border-white/10"
+            ? "border-zinc-300 bg-zinc-100 text-zinc-700 dark:border-white/15 dark:bg-white/10 dark:text-zinc-200"
+            : "border-zinc-200 text-zinc-400 hover:border-zinc-400 hover:text-zinc-700 dark:border-white/10 dark:hover:border-white/25 dark:hover:text-zinc-200"
         }`}
         disabled={tags.length === 0}
         onClick={() => setOpen((current) => !current)}
