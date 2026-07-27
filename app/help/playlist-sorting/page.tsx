@@ -109,7 +109,7 @@ function HelpSection({
 }) {
   return (
     <details className="group rounded-2xl border border-zinc-200 bg-white/90 shadow-sm backdrop-blur transition open:border-zinc-300 dark:border-[var(--app-sidebar-border)] dark:bg-[var(--app-control-bg)] dark:open:border-white/20">
-      <summary className="flex cursor-pointer list-none items-center gap-3 rounded-2xl p-5 outline-none transition hover:bg-zinc-50 focus-visible:ring-4 focus-visible:ring-[var(--accent-ring)] dark:hover:bg-white/[0.035] sm:px-7 [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-center gap-3 rounded-2xl p-5 outline-none transition hover:bg-zinc-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)] group-open:rounded-b-none group-open:hover:bg-transparent group-open:focus-visible:ring-0 dark:hover:bg-white/[0.035] dark:group-open:hover:bg-transparent sm:px-7 [&::-webkit-details-marker]:hidden">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-strong">
           {icon}
         </span>
@@ -121,7 +121,7 @@ function HelpSection({
           className="h-5 w-5 shrink-0 text-zinc-400 transition duration-200 group-open:rotate-180"
         />
       </summary>
-      <div className="mx-5 border-t border-zinc-200 pb-6 pt-5 dark:border-[var(--app-sidebar-border)] sm:mx-7">
+      <div className="mx-5 mt-1 border-t border-zinc-200 pb-6 pt-5 dark:border-[var(--app-sidebar-border)] sm:mx-7">
         <div className="max-w-3xl space-y-4 text-sm leading-7 text-zinc-600 dark:text-zinc-300 sm:text-base">
           {children}
         </div>
