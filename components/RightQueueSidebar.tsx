@@ -70,10 +70,10 @@ export function RightQueueSidebar({
             </p>
             {nextItems.length > 0 ? (
               <div className="space-y-2 lg:space-y-3">
-              {nextItems.map((item) => (
+              {nextItems.map((item, index) => (
                 <div
                   className="flex items-center gap-3 rounded-lg p-2 text-left transition hover:text-accent-strong active:text-accent-strong"
-                  key={`${item.id}-${item.title}`}
+                  key={`${item.id}-${currentIndex + index + 1}`}
                 >
                   <img
                     alt=""

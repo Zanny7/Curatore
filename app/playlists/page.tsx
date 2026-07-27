@@ -88,6 +88,15 @@ export default function PlaylistsPage() {
       if (!response.ok || !result.playlist) {
         throw new Error(result.error ?? "Unable to import playlist.");
       }
+      if (
+        importedPlaylists.some(
+          (playlist) => playlist.id === result.playlist?.id
+        )
+      ) {
+        throw new Error(
+          "This playlist is already imported. Open it and use Refresh instead."
+        );
+      }
 
       addImportedPlaylist(result.playlist);
       setImportName("");

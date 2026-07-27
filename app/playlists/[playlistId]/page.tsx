@@ -2,21 +2,33 @@
 
 import {
   ArrowLeft,
+  CalendarClock,
   CheckSquare,
+  ChevronDown,
+  ChevronUp,
   Copy,
+  GripVertical,
   MoreHorizontal,
   MoveRight,
+  Pencil,
   Play,
   Plus,
+  RefreshCw,
+  SlidersHorizontal,
   Star,
   Tags,
   Trash2,
   X
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { usePlayer } from "@/context/PlayerContext";
-import type { Playlist, SongMetadata, VideoItem } from "@/types";
+import type {
+  Playlist,
+  RemovedPlaylistVideo,
+  SongMetadata,
+  VideoItem
+} from "@/types";
 
 type TransferMode = "copy" | "move";
 
@@ -28,10 +40,16 @@ export default function PlaylistDetailPage() {
     copyPlaylistVideos,
     createCuratedPlaylist,
     curatedPlaylists,
+    deletePlaylist,
     loadPlaylist,
     movePlaylistVideos,
     playlistsLoaded,
+    refreshImportedPlaylist,
+    renamePlaylist,
     removePlaylistVideos,
+    reorderPlaylistVideos,
+    restorePlaylistVideos,
+    setPlaylistVideoFrequency,
     songMetadata,
     updatePlaylistVideo,
     updateSongMetadata
@@ -49,6 +67,35 @@ export default function PlaylistDetailPage() {
     mode: TransferMode;
   } | null>(null);
   const [removeIds, setRemoveIds] = useState<string[] | null>(null);
+  const [showRename, setShowRename] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [showBulkMetadata, setShowBulkMetadata] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [undoRemoval, setUndoRemoval] = useState<{
+    playlistId: string;
+    removed: RemovedPlaylistVideo[];
+  } | null>(null);
+  const tagSuggestions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          Object.values(songMetadata).flatMap((metadata) =>
+            metadata.keywords.map((keyword) => keyword.name)
+          )
+        )
+      ).sort((a, b) => a.localeCompare(b)),
+    [songMetadata]
+  );
+
+  useEffect(() => {
+    if (!undoRemoval) {
+      return;
+    }
+    const timeout = window.setTimeout(() => setUndoRemoval(null), 8000);
+    return () => window.clearTimeout(timeout);
+  }, [undoRemoval]);
 
   if (!playlistsLoaded) {
     return <p className="text-sm text-zinc-500">Loading playlist…</p>;
@@ -108,6 +155,54 @@ export default function PlaylistDetailPage() {
     setRemoveIds(null);
   }
 
+  async function refreshPlaylist() {
+    if (!playlist?.url || playlist.source !== "imported") {
+      return;
+    }
+
+    setRefreshing(true);
+    setNotice(null);
+    try {
+      const response = await fetch("/api/youtube/playlist", {
+        body: JSON.stringify({ name: playlist.name, url: playlist.url }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST"
+      });
+      const result = (await response.json()) as {
+        playlist?: Playlist;
+        error?: string;
+      };
+      if (!response.ok || !result.playlist) {
+        throw new Error(result.error ?? "Unable to refresh playlist.");
+      }
+      const added = refreshImportedPlaylist(playlist.id, result.playlist);
+      setNotice(
+        added === 0
+          ? "Playlist is already up to date."
+          : `${added} new ${added === 1 ? "song" : "songs"} added.`
+      );
+    } catch (error) {
+      setNotice(
+        error instanceof Error ? error.message : "Unable to refresh playlist."
+      );
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  function confirmRemoval(ids: string[]) {
+    if (!playlist) {
+      return;
+    }
+    const selectedIds = new Set(ids);
+    const removed = playlist.videos.flatMap((video, index) =>
+      selectedIds.has(video.id) ? [{ index, video }] : []
+    );
+    removePlaylistVideos(playlist.id, ids);
+    setUndoRemoval({ playlistId: playlist.id, removed });
+    finishBulkAction();
+  }
+
   return (
     <section className="mx-auto w-full max-w-6xl space-y-7">
       <div>
@@ -134,15 +229,72 @@ export default function PlaylistDetailPage() {
               </p>
             </div>
           </div>
-          <button
-            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-zinc-950 px-5 font-semibold text-zinc-950 transition hover:border-accent hover:text-accent-strong disabled:opacity-40 dark:border-white dark:text-white"
-            disabled={playlist.videos.length === 0}
-            onClick={() => playFrom()}
-            type="button"
-          >
-            <Play aria-hidden="true" className="h-4 w-4" />
-            Play playlist
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {playlist.source === "imported" ? (
+              <button
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-zinc-200 px-4 text-sm font-semibold text-zinc-600 transition hover:border-accent hover:text-accent-strong disabled:opacity-40 dark:border-white/10 dark:text-zinc-300"
+                disabled={refreshing}
+                onClick={refreshPlaylist}
+                type="button"
+              >
+                <RefreshCw
+                  aria-hidden="true"
+                  className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+                />
+                {refreshing ? "Refreshing" : "Refresh"}
+              </button>
+            ) : null}
+            <button
+              aria-label="Rename playlist"
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200 text-zinc-500 transition hover:border-accent hover:text-accent-strong dark:border-white/10 dark:text-zinc-300"
+              onClick={() => setShowRename(true)}
+              type="button"
+            >
+              <Pencil aria-hidden="true" className="h-4 w-4" />
+            </button>
+            <button
+              aria-label="Delete playlist"
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-red-500/25 text-red-500 transition hover:bg-red-500/10"
+              onClick={() => setShowDelete(true)}
+              type="button"
+            >
+              <Trash2 aria-hidden="true" className="h-4 w-4" />
+            </button>
+            <button
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-zinc-950 px-5 font-semibold text-zinc-950 transition hover:border-accent hover:text-accent-strong disabled:opacity-40 dark:border-white dark:text-white"
+              disabled={playlist.videos.length === 0}
+              onClick={() => playFrom()}
+              type="button"
+            >
+              <Play aria-hidden="true" className="h-4 w-4" />
+              Play playlist
+            </button>
+          </div>
+        </div>
+        <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 rounded-xl border border-zinc-200 bg-white/60 px-4 py-3 text-xs text-zinc-500 dark:border-white/10 dark:bg-white/[0.025] dark:text-zinc-400">
+          <span className="inline-flex items-center gap-2">
+            <CalendarClock aria-hidden="true" className="h-4 w-4" />
+            {playlist.source === "imported"
+              ? `Last refreshed ${formatDate(playlist.lastRefreshedAt)}`
+              : `Created ${formatDate(playlist.createdAt)}`}
+          </span>
+          {playlist.source === "imported" ? (
+            <span>
+              {(playlist.excludedVideoIds ?? []).length} locally excluded
+            </span>
+          ) : null}
+          <span>
+            {playlist.videos.reduce(
+              (total, video) => total + (video.playFrequency ?? 1),
+              0
+            )}{" "}
+            plays per cycle
+          </span>
+          {notice ? (
+            <span className="font-medium text-accent-strong" role="status">
+              {notice}
+            </span>
+          ) : null}
         </div>
       </div>
 
@@ -152,6 +304,7 @@ export default function PlaylistDetailPage() {
         disabled={selected.length === 0}
         onClear={() => setSelectedIds(new Set())}
         onCopy={() => setTransfer({ ids: selected, mode: "copy" })}
+        onEdit={() => setShowBulkMetadata(true)}
         onMove={() => setTransfer({ ids: selected, mode: "move" })}
         onRemove={() => setRemoveIds(selected)}
         onToggleAll={toggleAll}
@@ -159,15 +312,17 @@ export default function PlaylistDetailPage() {
 
       {playlist.videos.length > 0 ? (
         <div className="overflow-visible rounded-2xl border border-zinc-200 bg-white/85 shadow-sm backdrop-blur dark:border-white/10 dark:bg-neutral-900/85">
-          <div className="hidden grid-cols-[2.5rem_5rem_minmax(0,1fr)_7rem_10rem_2.5rem] items-center gap-3 border-b border-zinc-200 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:border-white/10 lg:grid">
+          <div className="hidden grid-cols-[2rem_2.5rem_5rem_minmax(0,1fr)_5rem_7rem_10rem_2.5rem] items-center gap-3 border-b border-zinc-200 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:border-white/10 2xl:grid">
+            <span />
             <span />
             <span />
             <span>Song</span>
+            <span>Frequency</span>
             <span>Rating</span>
-            <span>Keywords</span>
+            <span>Tags</span>
             <span />
           </div>
-          {playlist.videos.map((video) => {
+          {playlist.videos.map((video, index) => {
             const metadata = songMetadata[video.id] ?? { keywords: [] };
             const isSelected = selectedIds.has(video.id);
             return (
@@ -175,8 +330,29 @@ export default function PlaylistDetailPage() {
                 className={`relative flex items-center gap-3 border-b border-zinc-200 p-3 transition last:border-b-0 dark:border-white/10 ${
                   isSelected ? "bg-accent-subtle" : "hover:bg-zinc-50/80 dark:hover:bg-white/[0.025]"
                 }`}
-                key={`${video.id}-${video.title}`}
+                draggable
+                key={video.id}
+                onDragEnd={() => setDragIndex(null)}
+                onDragOver={(event) => event.preventDefault()}
+                onDragStart={(event) => {
+                  setDragIndex(index);
+                  event.dataTransfer.effectAllowed = "move";
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  if (dragIndex !== null) {
+                    reorderPlaylistVideos(playlist.id, dragIndex, index);
+                  }
+                  setDragIndex(null);
+                }}
               >
+                <span
+                  aria-label={`Drag to reorder ${video.title}`}
+                  className="hidden h-10 w-5 shrink-0 cursor-grab items-center justify-center text-zinc-400 active:cursor-grabbing sm:flex"
+                  role="img"
+                >
+                  <GripVertical aria-hidden="true" className="h-5 w-5" />
+                </span>
                 <label className="flex h-10 w-8 shrink-0 cursor-pointer items-center justify-center">
                   <input
                     checked={isSelected}
@@ -215,6 +391,22 @@ export default function PlaylistDetailPage() {
                     {video.duration ? ` · ${video.duration}` : ""}
                   </p>
                 </div>
+                <label className="hidden shrink-0 items-center gap-1 text-xs text-zinc-400 lg:flex">
+                  <span className="sr-only">Play frequency for {video.title}</span>
+                  <select
+                    className="h-9 rounded-lg border border-zinc-200 bg-transparent px-2 text-sm font-semibold text-zinc-600 outline-none focus:border-accent dark:border-white/10 dark:text-zinc-300"
+                    onChange={(event) =>
+                      setPlaylistVideoFrequency(playlist.id, [video.id], Number(event.target.value))
+                    }
+                    value={video.playFrequency ?? 1}
+                  >
+                    {[1, 2, 3, 4, 5].map((frequency) => (
+                      <option key={frequency} value={frequency}>
+                        {frequency}×
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <button
                   aria-label={`Rate ${video.title}`}
                   className="hidden w-24 shrink-0 items-center gap-2 rounded-lg px-2 py-2 text-sm text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5 sm:flex"
@@ -232,7 +424,7 @@ export default function PlaylistDetailPage() {
                   {metadata.rating ? `${metadata.rating}/10` : "Unrated"}
                 </button>
                 <button
-                  className="hidden w-40 shrink-0 items-center gap-2 overflow-hidden rounded-lg px-2 py-2 text-left text-xs text-zinc-500 transition hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-white/5 lg:flex"
+                  className="hidden w-40 shrink-0 items-center gap-2 overflow-hidden rounded-lg px-2 py-2 text-left text-xs text-zinc-500 transition hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-white/5 2xl:flex"
                   onClick={() => setMetadataVideo(video)}
                   type="button"
                 >
@@ -243,7 +435,7 @@ export default function PlaylistDetailPage() {
                           .slice(0, 2)
                           .map((keyword) => `${keyword.name} ${keyword.rating}`)
                           .join(" · ")
-                      : "Add keywords"}
+                      : "Add tags"}
                   </span>
                 </button>
                 <div className="relative shrink-0">
@@ -275,12 +467,39 @@ export default function PlaylistDetailPage() {
                         setTransfer({ ids: [video.id], mode: "move" });
                         setOpenMenuId(null);
                       }}
+                      onMoveDown={
+                        index < playlist.videos.length - 1
+                          ? () =>
+                              reorderPlaylistVideos(
+                                playlist.id,
+                                index,
+                                index + 1
+                              )
+                          : undefined
+                      }
+                      onMoveUp={
+                        index > 0
+                          ? () =>
+                              reorderPlaylistVideos(
+                                playlist.id,
+                                index,
+                                index - 1
+                              )
+                          : undefined
+                      }
                       onRemove={() => {
                         setRemoveIds([video.id]);
                         setOpenMenuId(null);
                       }}
                       onTrim={(updates) =>
                         updatePlaylistVideo(playlist.id, video.id, updates)
+                      }
+                      onFrequency={(frequency) =>
+                        setPlaylistVideoFrequency(
+                          playlist.id,
+                          [video.id],
+                          frequency
+                        )
                       }
                       video={video}
                     />
@@ -309,7 +528,41 @@ export default function PlaylistDetailPage() {
             updateSongMetadata(metadataVideo.id, metadata);
             setMetadataVideo(null);
           }}
+          suggestions={tagSuggestions}
           title={metadataVideo.title}
+        />
+      ) : null}
+
+      {showBulkMetadata ? (
+        <BulkMetadataDialog
+          count={selected.length}
+          onClose={() => setShowBulkMetadata(false)}
+          onSave={({ frequency, rating, tag }) => {
+            for (const videoId of selected) {
+              const current = songMetadata[videoId] ?? { keywords: [] };
+              const keywords = tag?.name
+                ? [
+                    ...current.keywords.filter(
+                      (keyword) =>
+                        keyword.name.toLocaleLowerCase() !==
+                        tag.name.toLocaleLowerCase()
+                    ),
+                    tag
+                  ]
+                : current.keywords;
+              updateSongMetadata(videoId, {
+                rating: rating ?? current.rating,
+                keywords
+              });
+            }
+            if (frequency) {
+              setPlaylistVideoFrequency(playlist.id, selected, frequency);
+            }
+            setShowBulkMetadata(false);
+            setSelectedIds(new Set());
+            setNotice(`${selected.length} songs updated.`);
+          }}
+          suggestions={tagSuggestions}
         />
       ) : null}
 
@@ -337,11 +590,57 @@ export default function PlaylistDetailPage() {
         <ConfirmRemoveDialog
           count={removeIds.length}
           onCancel={() => setRemoveIds(null)}
-          onConfirm={() => {
-            removePlaylistVideos(playlist.id, removeIds);
-            finishBulkAction();
+          onConfirm={() => confirmRemoval(removeIds)}
+        />
+      ) : null}
+
+      {showRename ? (
+        <RenamePlaylistDialog
+          initialName={playlist.name}
+          onCancel={() => setShowRename(false)}
+          onConfirm={(name) => {
+            renamePlaylist(playlist.id, name);
+            setShowRename(false);
+            setNotice("Playlist renamed.");
           }}
         />
+      ) : null}
+
+      {showDelete ? (
+        <DeletePlaylistDialog
+          name={playlist.name}
+          onCancel={() => setShowDelete(false)}
+          onConfirm={() => {
+            deletePlaylist(playlist.id);
+            router.push("/playlists");
+          }}
+        />
+      ) : null}
+
+      {undoRemoval ? (
+        <div
+          className="fixed bottom-24 left-1/2 z-[90] flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center gap-4 rounded-xl border border-white/10 bg-neutral-950 px-4 py-3 text-sm text-zinc-200 shadow-2xl"
+          role="status"
+        >
+          <span className="min-w-0 flex-1">
+            {undoRemoval.removed.length}{" "}
+            {undoRemoval.removed.length === 1 ? "song" : "songs"} removed.
+          </span>
+          <button
+            className="font-semibold text-accent-strong"
+            onClick={() => {
+              restorePlaylistVideos(
+                undoRemoval.playlistId,
+                undoRemoval.removed
+              );
+              setUndoRemoval(null);
+              setNotice("Removal undone.");
+            }}
+            type="button"
+          >
+            Undo
+          </button>
+        </div>
       ) : null}
     </section>
   );
@@ -366,7 +665,10 @@ function BulkToolbar({
   disabled,
   onClear,
   onCopy,
+  onEdit,
   onMove,
+  onMoveDown,
+  onMoveUp,
   onRemove,
   onToggleAll
 }: {
@@ -375,7 +677,10 @@ function BulkToolbar({
   disabled: boolean;
   onClear: () => void;
   onCopy: () => void;
+  onEdit: () => void;
   onMove: () => void;
+  onMoveDown?: () => void;
+  onMoveUp?: () => void;
   onRemove: () => void;
   onToggleAll: () => void;
 }) {
@@ -393,6 +698,12 @@ function BulkToolbar({
         {count > 0 ? `${count} selected` : "Select songs to manage"}
       </span>
       <ToolbarButton disabled={disabled} icon={Copy} label="Copy" onClick={onCopy} />
+      <ToolbarButton
+        disabled={disabled}
+        icon={SlidersHorizontal}
+        label="Edit"
+        onClick={onEdit}
+      />
       <ToolbarButton
         disabled={disabled}
         icon={MoveRight}
@@ -433,6 +744,7 @@ function ToolbarButton({
 }) {
   return (
     <button
+      aria-label={label}
       className={`inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-30 ${
         danger
           ? "border-red-500/30 text-red-500 hover:bg-red-500/10"
@@ -454,7 +766,10 @@ function SongMenu({
   onCopy,
   onEdit,
   onMove,
+  onMoveDown,
+  onMoveUp,
   onRemove,
+  onFrequency,
   onTrim,
   video
 }: {
@@ -463,7 +778,10 @@ function SongMenu({
   onCopy: () => void;
   onEdit: () => void;
   onMove: () => void;
+  onMoveDown?: () => void;
+  onMoveUp?: () => void;
   onRemove: () => void;
+  onFrequency: (frequency: number) => void;
   onTrim: (updates: Partial<VideoItem>) => void;
   video: VideoItem;
 }) {
@@ -475,13 +793,35 @@ function SongMenu({
         type="button"
       >
         <Star aria-hidden="true" className="h-4 w-4" />
-        Rating & keywords
+        Rating & tags
         {metadata.rating ? (
           <span className="ml-auto text-xs text-zinc-400">
             {metadata.rating}/10
           </span>
         ) : null}
       </button>
+      <div className="my-1 flex items-center justify-between border-t border-zinc-200 px-3 py-2 dark:border-white/10">
+        <div>
+          <p className="text-sm text-zinc-700 dark:text-zinc-200">
+            Play frequency
+          </p>
+          <p className="text-[11px] text-zinc-400">
+            Appearances per cycle
+          </p>
+        </div>
+        <select
+          aria-label={`Play frequency for ${video.title}`}
+          className="h-9 rounded-lg border border-zinc-200 bg-transparent px-2 text-sm font-semibold outline-none focus:border-accent dark:border-white/10 dark:bg-neutral-900"
+          onChange={(event) => onFrequency(Number(event.target.value))}
+          value={video.playFrequency ?? 1}
+        >
+          {[1, 2, 3, 4, 5].map((frequency) => (
+            <option key={frequency} value={frequency}>
+              {frequency}×
+            </option>
+          ))}
+        </select>
+      </div>
       <button
         className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-700 transition hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-white/5"
         onClick={onCopy}
@@ -498,6 +838,26 @@ function SongMenu({
         <MoveRight aria-hidden="true" className="h-4 w-4" />
         Move to playlist
       </button>
+      <div className="grid grid-cols-2 gap-1 border-t border-zinc-200 p-1 pt-2 dark:border-white/10">
+        <button
+          className="flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-xs text-zinc-600 transition hover:bg-zinc-100 disabled:opacity-30 dark:text-zinc-300 dark:hover:bg-white/5"
+          disabled={!onMoveUp}
+          onClick={onMoveUp}
+          type="button"
+        >
+          <ChevronUp aria-hidden="true" className="h-4 w-4" />
+          Earlier
+        </button>
+        <button
+          className="flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-xs text-zinc-600 transition hover:bg-zinc-100 disabled:opacity-30 dark:text-zinc-300 dark:hover:bg-white/5"
+          disabled={!onMoveDown}
+          onClick={onMoveDown}
+          type="button"
+        >
+          <ChevronDown aria-hidden="true" className="h-4 w-4" />
+          Later
+        </button>
+      </div>
       <div className="my-1 border-t border-zinc-200 px-3 py-2 dark:border-white/10">
         <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
           Playback trim
@@ -561,11 +921,13 @@ function MetadataDialog({
   initial,
   onClose,
   onSave,
+  suggestions,
   title
 }: {
   initial: SongMetadata;
   onClose: () => void;
   onSave: (metadata: SongMetadata) => void;
+  suggestions: string[];
   title: string;
 }) {
   const [rating, setRating] = useState(initial.rating);
@@ -599,7 +961,7 @@ function MetadataDialog({
       </div>
       <div className="mt-7">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-zinc-200">Keywords</p>
+          <p className="text-sm font-semibold text-zinc-200">Tags</p>
           <button
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-400 transition hover:text-accent-strong"
             onClick={() =>
@@ -611,7 +973,7 @@ function MetadataDialog({
             type="button"
           >
             <Plus aria-hidden="true" className="h-4 w-4" />
-            Add keyword
+            Add tag
           </button>
         </div>
         <div className="mt-3 max-h-64 space-y-2 overflow-y-auto">
@@ -622,8 +984,9 @@ function MetadataDialog({
                 key={`${index}-${keyword.name}`}
               >
                 <input
-                  aria-label="Keyword"
+                  aria-label="Tag"
                   className="h-10 rounded-lg border border-white/10 bg-neutral-900 px-3 text-sm text-white outline-none focus:border-accent"
+                  list="curatore-tag-suggestions"
                   onChange={(event) =>
                     setKeywords((current) =>
                       current.map((item, itemIndex) =>
@@ -633,11 +996,11 @@ function MetadataDialog({
                       )
                     )
                   }
-                  placeholder="Party"
+                  placeholder={'Enter a tag, e.g. "Pop"'}
                   value={keyword.name}
                 />
                 <select
-                  aria-label={`Match for ${keyword.name || "keyword"}`}
+                  aria-label={`Match for ${keyword.name || "tag"}`}
                   className="h-10 rounded-lg border border-white/10 bg-neutral-900 px-2 text-sm text-white outline-none focus:border-accent"
                   onChange={(event) =>
                     setKeywords((current) =>
@@ -659,7 +1022,7 @@ function MetadataDialog({
                   )}
                 </select>
                 <button
-                  aria-label={`Remove ${keyword.name || "keyword"}`}
+                  aria-label={`Remove ${keyword.name || "tag"}`}
                   className="flex h-10 items-center justify-center text-zinc-500 transition hover:text-red-400"
                   onClick={() =>
                     setKeywords((current) =>
@@ -674,10 +1037,15 @@ function MetadataDialog({
             ))
           ) : (
             <p className="rounded-lg border border-dashed border-white/10 px-4 py-5 text-center text-sm text-zinc-500">
-              Add keywords such as Party, Focus, or Chill and rate the match.
+              Add tags such as Party, Focus, or Chill and rate the match.
             </p>
           )}
         </div>
+        <datalist id="curatore-tag-suggestions">
+          {suggestions.map((suggestion) => (
+            <option key={suggestion} value={suggestion} />
+          ))}
+        </datalist>
       </div>
       <div className="mt-7 flex gap-3">
         <button
@@ -819,6 +1187,245 @@ function TransferDialog({
   );
 }
 
+function BulkMetadataDialog({
+  count,
+  onClose,
+  onSave,
+  suggestions
+}: {
+  count: number;
+  onClose: () => void;
+  onSave: (updates: {
+    frequency?: number;
+    rating?: number;
+    tag?: { name: string; rating: number };
+  }) => void;
+  suggestions: string[];
+}) {
+  const [rating, setRating] = useState("");
+  const [frequency, setFrequency] = useState("");
+  const [tagName, setTagName] = useState("");
+  const [tagRating, setTagRating] = useState(5);
+  const hasChanges = Boolean(rating || frequency || tagName.trim());
+
+  return (
+    <Modal onClose={onClose}>
+      <p className="text-accent text-xs font-semibold uppercase tracking-[0.18em]">
+        Bulk edit
+      </p>
+      <h2 className="mt-2 text-2xl font-bold text-white">
+        Edit {count} {count === 1 ? "song" : "songs"}
+      </h2>
+      <p className="mt-2 text-sm text-zinc-400">
+        Only the fields you choose below will be changed.
+      </p>
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <SelectField
+          label="Overall rating"
+          onChange={setRating}
+          options={Array.from({ length: 10 }, (_, index) => ({
+            label: `${index + 1}/10`,
+            value: String(index + 1)
+          }))}
+          placeholder="Leave unchanged"
+          value={rating}
+        />
+        <SelectField
+          label="Play frequency"
+          onChange={setFrequency}
+          options={[1, 2, 3, 4, 5].map((value) => ({
+            label: `${value}× per cycle`,
+            value: String(value)
+          }))}
+          placeholder="Leave unchanged"
+          value={frequency}
+        />
+      </div>
+      <div className="mt-5 rounded-xl border border-white/10 p-4">
+        <p className="text-sm font-semibold text-zinc-200">
+          Add the same tag
+        </p>
+        <div className="mt-3 grid grid-cols-[minmax(0,1fr)_6rem] gap-2">
+          <input
+            className="h-10 rounded-lg border border-white/10 bg-neutral-900 px-3 text-sm text-white outline-none focus:border-accent"
+            list="curatore-bulk-tag-suggestions"
+            onChange={(event) => setTagName(event.target.value)}
+            placeholder={'Enter a tag, e.g. "Pop"'}
+            value={tagName}
+          />
+          <select
+            aria-label="Tag match"
+            className="h-10 rounded-lg border border-white/10 bg-neutral-900 px-2 text-sm text-white outline-none focus:border-accent"
+            onChange={(event) => setTagRating(Number(event.target.value))}
+            value={tagRating}
+          >
+            {Array.from({ length: 10 }, (_, index) => index + 1).map(
+              (value) => (
+                <option key={value} value={value}>
+                  {value}/10
+                </option>
+              )
+            )}
+          </select>
+        </div>
+        <datalist id="curatore-bulk-tag-suggestions">
+          {suggestions.map((suggestion) => (
+            <option key={suggestion} value={suggestion} />
+          ))}
+        </datalist>
+      </div>
+      <div className="mt-7 flex gap-3">
+        <button
+          className="h-11 flex-1 rounded-xl border border-white/10 text-sm font-semibold text-zinc-300"
+          onClick={onClose}
+          type="button"
+        >
+          Cancel
+        </button>
+        <button
+          className="h-11 flex-1 rounded-xl bg-white text-sm font-semibold text-zinc-950 transition hover:bg-[var(--accent)] disabled:opacity-40"
+          disabled={!hasChanges}
+          onClick={() =>
+            onSave({
+              frequency: frequency ? Number(frequency) : undefined,
+              rating: rating ? Number(rating) : undefined,
+              tag: tagName.trim()
+                ? { name: tagName.trim(), rating: tagRating }
+                : undefined
+            })
+          }
+          type="button"
+        >
+          Apply changes
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function SelectField({
+  label,
+  onChange,
+  options,
+  placeholder,
+  value
+}: {
+  label: string;
+  onChange: (value: string) => void;
+  options: Array<{ label: string; value: string }>;
+  placeholder: string;
+  value: string;
+}) {
+  return (
+    <label className="space-y-2">
+      <span className="text-sm font-semibold text-zinc-200">{label}</span>
+      <select
+        className="h-11 w-full rounded-lg border border-white/10 bg-neutral-900 px-3 text-sm text-white outline-none focus:border-accent"
+        onChange={(event) => onChange(event.target.value)}
+        value={value}
+      >
+        <option value="">{placeholder}</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function RenamePlaylistDialog({
+  initialName,
+  onCancel,
+  onConfirm
+}: {
+  initialName: string;
+  onCancel: () => void;
+  onConfirm: (name: string) => void;
+}) {
+  const [name, setName] = useState(initialName);
+
+  return (
+    <Modal onClose={onCancel}>
+      <p className="text-accent text-xs font-semibold uppercase tracking-[0.18em]">
+        Playlist settings
+      </p>
+      <h2 className="mt-2 text-2xl font-bold text-white">Rename playlist</h2>
+      <label className="mt-6 block space-y-2">
+        <span className="text-sm font-semibold text-zinc-200">
+          Playlist name
+        </span>
+        <input
+          autoFocus
+          className="h-11 w-full rounded-lg border border-white/10 bg-neutral-900 px-3 text-white outline-none focus:border-accent"
+          onChange={(event) => setName(event.target.value)}
+          value={name}
+        />
+      </label>
+      <div className="mt-7 flex gap-3">
+        <button
+          className="h-11 flex-1 rounded-xl border border-white/10 text-sm font-semibold text-zinc-300"
+          onClick={onCancel}
+          type="button"
+        >
+          Cancel
+        </button>
+        <button
+          className="h-11 flex-1 rounded-xl bg-white text-sm font-semibold text-zinc-950 transition hover:bg-[var(--accent)] disabled:opacity-40"
+          disabled={!name.trim() || name.trim() === initialName}
+          onClick={() => onConfirm(name)}
+          type="button"
+        >
+          Save name
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function DeletePlaylistDialog({
+  name,
+  onCancel,
+  onConfirm
+}: {
+  name: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Modal onClose={onCancel}>
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-400">
+        Delete playlist
+      </p>
+      <h2 className="mt-2 text-2xl font-bold text-white">
+        Are you sure you want to delete &ldquo;{name}&rdquo;?
+      </h2>
+      <p className="mt-3 text-sm leading-6 text-zinc-400">
+        This cannot be undone. Songs and their ratings or tags remain anywhere
+        else they are used. Imported refresh exclusions for this playlist are
+        removed with it.
+      </p>
+      <div className="mt-7 flex gap-3">
+        <button
+          className="h-11 flex-1 rounded-xl border border-white/10 text-sm font-semibold text-zinc-300"
+          onClick={onCancel}
+          type="button"
+        >
+          Cancel
+        </button>
+        <button
+          className="h-11 flex-1 rounded-xl bg-red-500 text-sm font-semibold text-white transition hover:bg-red-400"
+          onClick={onConfirm}
+          type="button"
+        >
+          Delete playlist
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 function ConfirmRemoveDialog({
   count,
   onCancel,
@@ -838,7 +1445,7 @@ function ConfirmRemoveDialog({
       </h2>
       <p className="mt-3 text-sm leading-6 text-zinc-400">
         This only removes the selected songs from this playlist. Ratings,
-        keywords, and copies in other playlists remain untouched.
+        tags, and copies in other playlists remain untouched.
       </p>
       <div className="mt-7 flex gap-3">
         <button
@@ -874,7 +1481,7 @@ function Modal({
     >
       <div
         aria-modal="true"
-        className="relative w-full max-w-lg rounded-2xl border border-white/10 bg-neutral-950 p-6 shadow-2xl"
+        className="relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-neutral-950 p-6 shadow-2xl"
         role="dialog"
       >
         <button
@@ -916,4 +1523,18 @@ function formatTime(value?: number) {
   const minutes = Math.floor(value / 60);
   const seconds = value % 60;
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+function formatDate(value?: string) {
+  if (!value) {
+    return "not recorded";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "not recorded";
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(date);
 }

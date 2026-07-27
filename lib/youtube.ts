@@ -39,6 +39,8 @@ export async function fetchPlaylistById(
     throw new Error("No playable embeddable videos were found in this playlist.");
   }
 
+  const importedAt = new Date().toISOString();
+
   return {
     id: playlistId,
     name: nameOverride?.trim() || metadata.title,
@@ -47,7 +49,14 @@ export async function fetchPlaylistById(
       metadata.thumbnailUrl ?? videos[0]?.thumbnailUrl ?? PLACEHOLDER_THUMBNAIL,
     videoCount: videos.length,
     source: "imported",
-    videos
+    videos: videos.map((video) => ({
+      ...video,
+      addedAt: importedAt,
+      playFrequency: 1
+    })),
+    createdAt: importedAt,
+    lastRefreshedAt: importedAt,
+    excludedVideoIds: []
   };
 }
 

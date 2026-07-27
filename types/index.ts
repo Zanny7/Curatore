@@ -30,6 +30,8 @@ export type VideoItem = {
   duration?: string;
   startSeconds?: number;
   endSeconds?: number;
+  addedAt?: string;
+  playFrequency?: number;
 };
 
 export type KeywordRating = {
@@ -50,6 +52,14 @@ export type Playlist = {
   videoCount: number;
   source: "curated" | "imported";
   videos: VideoItem[];
+  createdAt?: string;
+  lastRefreshedAt?: string;
+  excludedVideoIds?: string[];
+};
+
+export type RemovedPlaylistVideo = {
+  index: number;
+  video: VideoItem;
 };
 
 export type PlayerState = {
