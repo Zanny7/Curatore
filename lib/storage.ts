@@ -108,7 +108,22 @@ export function readStoredSongMetadata(): Record<string, SongMetadata> {
 
   try {
     const value = window.localStorage.getItem(SONG_METADATA_KEY);
-    return value ? (JSON.parse(value) as Record<string, SongMetadata>) : {};
+    if (!value) {
+      return {};
+    }
+    const stored = JSON.parse(value) as Record<string, SongMetadata>;
+    return Object.fromEntries(
+      Object.entries(stored).map(([videoId, metadata]) => [
+        videoId,
+        {
+          ...metadata,
+          rating:
+            metadata.rating === undefined
+              ? undefined
+              : Math.min(5, Math.max(1, Math.round(metadata.rating)))
+        }
+      ])
+    );
   } catch {
     return {};
   }

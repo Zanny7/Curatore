@@ -340,6 +340,31 @@ export default function PlaylistDetailPage() {
             const isSelected = selectedIds.has(video.id);
             const editorKind =
               inlineEditor?.videoId === video.id ? inlineEditor.kind : null;
+            const editor = editorKind ? (
+              <SongInlineEditor
+                frequency={video.playFrequency ?? 1}
+                kind={editorKind}
+                metadata={metadata}
+                onClose={() => setInlineEditor(null)}
+                onSaveFrequency={(frequency) => {
+                  setPlaylistVideoFrequency(
+                    playlist.id,
+                    [video.id],
+                    frequency
+                  );
+                  setInlineEditor(null);
+                }}
+                onSaveRating={(rating) => {
+                  updateSongMetadata(video.id, { ...metadata, rating });
+                  setInlineEditor(null);
+                }}
+                onSaveTags={(keywords) => {
+                  updateSongMetadata(video.id, { ...metadata, keywords });
+                  setInlineEditor(null);
+                }}
+                suggestions={tagSuggestions}
+              />
+            ) : null;
             return (
               <div
                 className={`relative flex items-center gap-3 border-b border-zinc-200 p-3 transition last:border-b-0 dark:border-white/10 ${
@@ -407,22 +432,27 @@ export default function PlaylistDetailPage() {
                   </p>
                   <div className="relative mt-2 flex items-center gap-1 2xl:hidden">
                     <CompactSongControl
+                      editor={editorKind === "frequency" ? editor : null}
                       icon={Repeat2}
                       label={`${video.playFrequency ?? 1}x`}
                       onClick={() =>
                         toggleInlineEditor(video.id, "frequency")
                       }
+                      width="frequency"
                     />
                     <CompactSongControl
                       active={Boolean(metadata.rating)}
+                      editor={editorKind === "rating" ? editor : null}
                       icon={Star}
                       label={
-                        metadata.rating ? `${metadata.rating}/10` : "—"
+                        metadata.rating ? `${metadata.rating}/5` : "—"
                       }
                       onClick={() => toggleInlineEditor(video.id, "rating")}
+                      width="rating"
                     />
                     <CompactSongControl
                       active={metadata.keywords.length > 0}
+                      editor={editorKind === "tags" ? editor : null}
                       icon={Tags}
                       label={
                         metadata.keywords.length > 0
@@ -430,118 +460,68 @@ export default function PlaylistDetailPage() {
                           : "—"
                       }
                       onClick={() => toggleInlineEditor(video.id, "tags")}
+                      width="tags"
                     />
-                    {editorKind ? (
-                      <SongInlineEditor
-                        frequency={video.playFrequency ?? 1}
-                        kind={editorKind}
-                        metadata={metadata}
-                        onClose={() => setInlineEditor(null)}
-                        onSaveFrequency={(frequency) => {
-                          setPlaylistVideoFrequency(
-                            playlist.id,
-                            [video.id],
-                            frequency
-                          );
-                          setInlineEditor(null);
-                        }}
-                        onSaveRating={(rating) => {
-                          updateSongMetadata(video.id, {
-                            ...metadata,
-                            rating
-                          });
-                          setInlineEditor(null);
-                        }}
-                        onSaveTags={(keywords) => {
-                          updateSongMetadata(video.id, {
-                            ...metadata,
-                            keywords
-                          });
-                          setInlineEditor(null);
-                        }}
-                        suggestions={tagSuggestions}
-                      />
-                    ) : null}
                   </div>
                 </div>
                 <div className="relative hidden shrink-0 items-center 2xl:flex">
-                  <button
-                    aria-label={`Set play frequency for ${video.title}`}
-                    className="flex w-24 items-center gap-2 rounded-lg px-2 py-2 text-sm text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
-                    onClick={() =>
-                      toggleInlineEditor(video.id, "frequency")
-                    }
-                    type="button"
-                  >
-                    <Repeat2 aria-hidden="true" className="h-4 w-4" />
-                    {(video.playFrequency ?? 1) === 1
-                      ? "Default"
-                      : `${video.playFrequency}x`}
-                  </button>
-                  <button
-                    aria-label={`Rate ${video.title}`}
-                    className="flex w-24 items-center gap-2 rounded-lg px-2 py-2 text-sm text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
-                    onClick={() => toggleInlineEditor(video.id, "rating")}
-                    type="button"
-                  >
-                    <Star
-                      aria-hidden="true"
-                      className={`h-4 w-4 ${
-                        metadata.rating
-                          ? "fill-[var(--accent)] text-[var(--accent)]"
-                          : ""
-                      }`}
-                    />
-                    {metadata.rating ? `${metadata.rating}/10` : "Unrated"}
-                  </button>
-                  <button
-                    aria-label={`Edit tags for ${video.title}`}
-                    className="flex w-40 items-center gap-2 overflow-hidden rounded-lg px-2 py-2 text-left text-xs text-zinc-500 transition hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-white/5"
-                    onClick={() => toggleInlineEditor(video.id, "tags")}
-                    type="button"
-                  >
-                    <Tags aria-hidden="true" className="h-4 w-4 shrink-0" />
-                    <span className="truncate">
-                      {metadata.keywords.length > 0
-                        ? metadata.keywords
-                            .slice(0, 2)
-                            .map(
-                              (keyword) =>
-                                `${keyword.name} ${keyword.rating}`
-                            )
-                            .join(" · ")
-                        : "Add tags"}
-                    </span>
-                  </button>
-                  {editorKind ? (
-                    <SongInlineEditor
-                      align="right"
-                      frequency={video.playFrequency ?? 1}
-                      kind={editorKind}
-                      metadata={metadata}
-                      onClose={() => setInlineEditor(null)}
-                      onSaveFrequency={(frequency) => {
-                        setPlaylistVideoFrequency(
-                          playlist.id,
-                          [video.id],
-                          frequency
-                        );
-                        setInlineEditor(null);
-                      }}
-                      onSaveRating={(rating) => {
-                        updateSongMetadata(video.id, { ...metadata, rating });
-                        setInlineEditor(null);
-                      }}
-                      onSaveTags={(keywords) => {
-                        updateSongMetadata(video.id, {
-                          ...metadata,
-                          keywords
-                        });
-                        setInlineEditor(null);
-                      }}
-                      suggestions={tagSuggestions}
-                    />
-                  ) : null}
+                  <div className="relative w-24">
+                    <button
+                      aria-label={`Set play frequency for ${video.title}`}
+                      className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
+                      onClick={() =>
+                        toggleInlineEditor(video.id, "frequency")
+                      }
+                      type="button"
+                    >
+                      <Repeat2 aria-hidden="true" className="h-4 w-4" />
+                      {(video.playFrequency ?? 1) === 1
+                        ? "Default"
+                        : `${video.playFrequency}x`}
+                    </button>
+                    {editorKind === "frequency" ? editor : null}
+                  </div>
+                  <div className="relative w-24">
+                    <button
+                      aria-label={`Rate ${video.title}`}
+                      className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
+                      onClick={() => toggleInlineEditor(video.id, "rating")}
+                      type="button"
+                    >
+                      <Star
+                        aria-hidden="true"
+                        className={`h-4 w-4 ${
+                          metadata.rating
+                            ? "fill-[var(--accent)] text-[var(--accent)]"
+                            : ""
+                        }`}
+                      />
+                      {metadata.rating ? `${metadata.rating}/5` : "Unrated"}
+                    </button>
+                    {editorKind === "rating" ? editor : null}
+                  </div>
+                  <div className="relative w-40">
+                    <button
+                      aria-label={`Edit tags for ${video.title}`}
+                      className="flex w-full items-center gap-2 overflow-hidden rounded-lg px-2 py-2 text-left text-xs text-zinc-500 transition hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-white/5"
+                      onClick={() => toggleInlineEditor(video.id, "tags")}
+                      type="button"
+                    >
+                      <Tags aria-hidden="true" className="h-4 w-4 shrink-0" />
+                      <span className="truncate">
+                        {metadata.keywords.length > 0
+                          ? metadata.keywords
+                              .slice(0, 2)
+                              .map(
+                                (keyword) =>
+                                  `${keyword.name} ${keyword.rating}`
+                              )
+                              .join(" · ")
+                          : "Add tags"}
+                      </span>
+                    </button>
+                    {editorKind === "tags" ? editor : null}
+                  </div>
                 </div>
                 <div className="relative shrink-0">
                   <button
@@ -741,28 +721,38 @@ function BackButton({ onClick }: { onClick: () => void }) {
 
 function CompactSongControl({
   active = false,
+  editor,
   icon: Icon,
   label,
-  onClick
+  onClick,
+  width
 }: {
   active?: boolean;
+  editor?: React.ReactNode;
   icon: typeof Star;
   label: string;
   onClick: () => void;
+  width: "frequency" | "rating" | "tags";
 }) {
+  const widthClass =
+    width === "frequency" ? "w-12" : width === "rating" ? "w-14" : "w-10";
+
   return (
-    <button
-      className={`inline-flex h-7 min-w-0 items-center gap-1 rounded-md px-1.5 text-[10px] font-medium transition hover:bg-zinc-100 hover:text-accent-strong dark:hover:bg-white/5 ${
-        active
-          ? "text-accent-strong"
-          : "text-zinc-500 dark:text-zinc-400"
-      }`}
-      onClick={onClick}
-      type="button"
-    >
-      <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-      <span className="truncate">{label}</span>
-    </button>
+    <div className={`relative shrink-0 ${widthClass}`}>
+      <button
+        className={`inline-flex h-7 w-full min-w-0 items-center justify-center gap-1 rounded-md px-1 text-[10px] font-medium transition hover:bg-zinc-100 hover:text-accent-strong dark:hover:bg-white/5 ${
+          active
+            ? "text-accent-strong"
+            : "text-zinc-500 dark:text-zinc-400"
+        }`}
+        onClick={onClick}
+        type="button"
+      >
+        <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+        <span className="truncate">{label}</span>
+      </button>
+      {editor}
+    </div>
   );
 }
 
@@ -988,7 +978,6 @@ function TrimField({
 }
 
 function SongInlineEditor({
-  align = "left",
   frequency,
   kind,
   metadata,
@@ -998,7 +987,6 @@ function SongInlineEditor({
   onSaveTags,
   suggestions
 }: {
-  align?: "left" | "right";
   frequency: number;
   kind: InlineEditorKind;
   metadata: SongMetadata;
@@ -1041,20 +1029,19 @@ function SongInlineEditor({
 
   return (
     <div
-      className={`absolute top-[calc(100%+0.45rem)] z-50 w-[min(18rem,calc(100vw-2rem))] rounded-xl border border-zinc-200 bg-white p-3 text-left shadow-2xl dark:border-white/10 dark:bg-neutral-950 ${
-        align === "right" ? "right-0" : "right-0 2xl:left-0 2xl:right-auto"
+      className={`absolute top-[calc(100%+0.35rem)] z-50 overflow-hidden rounded-xl border border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] text-left shadow-2xl backdrop-blur-xl ${
+        kind === "tags"
+          ? "right-0 w-[min(18rem,calc(100vw-2rem))] p-3"
+          : "left-0 w-full p-1.5"
       }`}
       draggable={false}
       onClick={(event) => event.stopPropagation()}
       onDragStart={(event) => event.preventDefault()}
     >
+      {kind === "tags" ? (
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-semibold text-zinc-950 dark:text-white">
-          {kind === "frequency"
-            ? "Set Frequency"
-            : kind === "rating"
-              ? "Set Rating"
-              : "Add Tags"}
+          Add Tags
         </p>
         <button
           aria-label="Close editor"
@@ -1065,16 +1052,17 @@ function SongInlineEditor({
           <X aria-hidden="true" className="h-4 w-4" />
         </button>
       </div>
+      ) : null}
 
       {kind === "frequency" ? (
-        <div className="mt-3 grid grid-cols-5 gap-1.5">
+        <div aria-label="Set Frequency" className="flex flex-col gap-1">
           {[1, 2, 3, 4, 5].map((value) => (
             <button
               aria-pressed={frequency === value}
-              className={`h-9 rounded-lg border text-xs font-semibold transition ${
+              className={`h-8 w-full rounded-lg border text-xs font-semibold transition ${
                 frequency === value
-                  ? "border-[var(--accent)] bg-[var(--accent)] text-black"
-                  : "border-zinc-200 text-zinc-500 hover:border-[var(--accent)] hover:text-accent-strong dark:border-white/10 dark:text-zinc-300"
+                  ? "border-[var(--accent)] bg-accent-soft text-accent-strong"
+                  : "border-transparent text-zinc-300 hover:bg-white/5 hover:text-white"
               }`}
               key={value}
               onClick={() => onSaveFrequency(value)}
@@ -1087,20 +1075,20 @@ function SongInlineEditor({
       ) : null}
 
       {kind === "rating" ? (
-        <div className="mt-3 grid grid-cols-5 gap-1.5">
-          {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => (
+        <div aria-label="Set Rating" className="flex flex-col gap-1">
+          {Array.from({ length: 5 }, (_, index) => index + 1).map((value) => (
             <button
               aria-pressed={metadata.rating === value}
-              className={`h-8 rounded-lg border text-xs font-semibold transition ${
+              className={`h-8 w-full rounded-lg border text-xs font-semibold transition ${
                 metadata.rating === value
-                  ? "border-[var(--accent)] bg-[var(--accent)] text-black"
-                  : "border-zinc-200 text-zinc-500 hover:border-[var(--accent)] hover:text-accent-strong dark:border-white/10 dark:text-zinc-300"
+                  ? "border-[var(--accent)] bg-accent-soft text-accent-strong"
+                  : "border-transparent text-zinc-300 hover:bg-white/5 hover:text-white"
               }`}
               key={value}
               onClick={() => onSaveRating(value)}
               type="button"
             >
-              {value}
+              {value}★
             </button>
           ))}
         </div>
@@ -1141,14 +1129,14 @@ function SongInlineEditor({
           >
             <input
               aria-label="Tag name"
-              className="h-9 min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-xs text-zinc-950 outline-none focus:border-accent dark:border-white/10 dark:bg-neutral-900 dark:text-white"
+              className="h-9 min-w-0 rounded-lg border border-[var(--app-sidebar-border)] bg-white/5 px-2.5 text-xs text-white outline-none placeholder:text-zinc-500 focus:border-accent"
               onChange={(event) => setTagName(event.target.value)}
               placeholder={'e.g. "Pop"'}
               value={tagName}
             />
             <select
               aria-label="Tag match"
-              className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-1 text-xs text-zinc-950 outline-none focus:border-accent dark:border-white/10 dark:bg-neutral-900 dark:text-white"
+              className="h-9 rounded-lg border border-[var(--app-sidebar-border)] bg-white/5 px-1 text-xs text-white outline-none focus:border-accent"
               onChange={(event) => setTagRating(Number(event.target.value))}
               value={tagRating}
             >
@@ -1162,7 +1150,7 @@ function SongInlineEditor({
             </select>
             <button
               aria-label="Add tag"
-              className="flex h-9 items-center justify-center rounded-lg border border-zinc-200 text-zinc-500 transition hover:border-accent hover:text-accent-strong dark:border-white/10"
+              className="flex h-9 items-center justify-center rounded-lg border border-[var(--app-sidebar-border)] text-zinc-400 transition hover:border-accent hover:text-accent-strong"
               type="submit"
             >
               <Plus aria-hidden="true" className="h-4 w-4" />
@@ -1177,7 +1165,7 @@ function SongInlineEditor({
               <div className="flex max-h-20 flex-wrap gap-1.5 overflow-y-auto">
                 {unusedSuggestions.map((suggestion) => (
                   <button
-                    className="rounded-full border border-zinc-200 px-2.5 py-1 text-[11px] text-zinc-500 transition hover:border-accent hover:text-accent-strong dark:border-white/10 dark:text-zinc-300"
+                    className="rounded-full border border-[var(--app-sidebar-border)] bg-white/5 px-2.5 py-1 text-[11px] text-zinc-300 transition hover:border-accent hover:text-accent-strong"
                     key={suggestion}
                     onClick={() => addTag(suggestion)}
                     type="button"
@@ -1189,7 +1177,7 @@ function SongInlineEditor({
             </div>
           ) : null}
           <button
-            className="h-9 w-full rounded-lg bg-zinc-950 text-xs font-semibold text-white transition hover:bg-[var(--accent)] hover:text-black dark:bg-white dark:text-zinc-950"
+            className="h-9 w-full rounded-lg border border-[var(--accent)] bg-accent-soft text-xs font-semibold text-accent-strong transition hover:bg-[var(--accent)] hover:text-black"
             onClick={() => onSaveTags(keywords)}
             type="button"
           >
@@ -1347,8 +1335,8 @@ function BulkMetadataDialog({
         <SelectField
           label="Overall rating"
           onChange={setRating}
-          options={Array.from({ length: 10 }, (_, index) => ({
-            label: `${index + 1}/10`,
+          options={Array.from({ length: 5 }, (_, index) => ({
+            label: `${index + 1}/5`,
             value: String(index + 1)
           }))}
           placeholder="Leave unchanged"

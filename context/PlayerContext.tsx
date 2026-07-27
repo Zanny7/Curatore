@@ -608,7 +608,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const updateSongMetadata = useCallback(
     (videoId: string, metadata: SongMetadata) => {
       setSongMetadata((current) => {
-        const next = { ...current, [videoId]: metadata };
+        const next = {
+          ...current,
+          [videoId]: {
+            ...metadata,
+            rating:
+              metadata.rating === undefined
+                ? undefined
+                : Math.min(5, Math.max(1, Math.round(metadata.rating)))
+          }
+        };
         writeStoredSongMetadata(next);
         return next;
       });
