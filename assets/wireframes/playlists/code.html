@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Curatore - Playlists</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-container": "#636565",
+                        "on-secondary-fixed": "#1b1b1c",
+                        "surface-container-high": "#2a2a2a",
+                        "surface-container": "#201f1f",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-secondary-container": "#b7b5b4",
+                        "tertiary-fixed": "#e4e2e1",
+                        "on-surface": "#e5e2e1",
+                        "surface": "#131313",
+                        "secondary-fixed-dim": "#c8c6c5",
+                        "primary": "#ffffff",
+                        "on-surface-variant": "#c4c7c8",
+                        "tertiary-container": "#e4e2e1",
+                        "surface-bright": "#393939",
+                        "surface-variant": "#353534",
+                        "on-error": "#690005",
+                        "inverse-on-surface": "#313030",
+                        "on-error-container": "#ffdad6",
+                        "error": "#ffb4ab",
+                        "tertiary": "#ffffff",
+                        "on-tertiary-fixed": "#1b1c1c",
+                        "on-secondary": "#303030",
+                        "secondary": "#c8c6c5",
+                        "background": "#131313",
+                        "on-tertiary-fixed-variant": "#474746",
+                        "surface-container-low": "#1c1b1b",
+                        "outline": "#8e9192",
+                        "error-container": "#93000a",
+                        "inverse-primary": "#5d5f5f",
+                        "on-primary": "#2f3131",
+                        "surface-container-highest": "#353534",
+                        "outline-variant": "#444748",
+                        "on-background": "#e5e2e1",
+                        "tertiary-fixed-dim": "#c8c6c5",
+                        "on-tertiary-container": "#656464",
+                        "on-tertiary": "#303030",
+                        "primary-fixed-dim": "#c6c6c7",
+                        "primary-fixed": "#e2e2e2",
+                        "on-primary-fixed": "#1a1c1c",
+                        "inverse-surface": "#e5e2e1",
+                        "surface-tint": "#c6c6c7",
+                        "secondary-fixed": "#e5e2e1",
+                        "primary-container": "#e2e2e2",
+                        "secondary-container": "#474746",
+                        "on-primary-fixed-variant": "#454747",
+                        "surface-dim": "#131313",
+                        "on-secondary-fixed-variant": "#474746"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sidebar-width": "240px",
+                        "stack-sm": "0.5rem",
+                        "stack-lg": "2rem",
+                        "gutter": "1.5rem",
+                        "stack-md": "1rem",
+                        "margin-page": "2rem"
+                    },
+                    "fontFamily": {
+                        "label-bold": ["Inter"],
+                        "headline-xl": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-bold": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-xl": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-md": ["20px", {"lineHeight": "1.4", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "body-lg": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #131313;
+            color: #e5e2e1;
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #353534;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #444748;
+        }
+    </style>
+</head>
+<body class="overflow-hidden flex bg-background text-on-background font-body-sm text-body-sm antialiased h-screen">
+<!-- SideNavBar (Left) -->
+<nav class="bg-surface-container-low fixed left-0 top-0 h-full w-[240px] border-r border-outline-variant rounded-r-2xl flex flex-col py-margin-page z-20">
+<button class="absolute right-0 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center z-30 text-on-surface-variant hover:text-primary cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-[32px]">chevron_left</span>
+</button>
+<div class="px-gutter mb-stack-lg">
+<h1 class="font-headline-xl text-headline-xl text-primary font-bold">Curatore</h1>
+<p class="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-widest mt-1">Media Manager</p>
+</div>
+<div class="flex-1 flex flex-col gap-1 px-2">
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant/70 hover:text-primary border-l-4 border-transparent hover:bg-surface-container-high transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">play_circle</span>
+<span class="font-body-lg text-body-lg">Player</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-primary font-bold border-l-4 border-primary bg-surface-container-high transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">playlist_play</span>
+<span class="font-body-lg text-body-lg">Playlists</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant/70 hover:text-primary border-l-4 border-transparent hover:bg-surface-container-high transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-body-lg text-body-lg">Social</span>
+</a>
+</div>
+<div class="flex flex-col gap-1 px-2 mt-auto">
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant/70 hover:text-primary border-l-4 border-transparent hover:bg-surface-container-high transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">auto_awesome</span>
+<span class="font-body-lg text-body-lg">Dynamic</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant/70 hover:text-primary border-l-4 border-transparent hover:bg-surface-container-high transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-body-lg text-body-lg">Guide</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant/70 hover:text-primary border-l-4 border-transparent hover:bg-surface-container-high transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-lg text-body-lg">Settings</span>
+</a>
+</div>
+<div class="flex items-center gap-3 px-4 py-4 mt-2 border-t border-outline-variant/50">
+<div class="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant">person</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-body-sm font-semibold text-primary truncate">Example User</p>
+<p class="text-[11px] text-on-surface-variant truncate">user@curatore.com</p>
+</div>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="ml-[240px] mr-[280px] flex-1 h-screen overflow-y-auto bg-background p-margin-page pb-32 relative">
+<!-- Centered Header from Reference Image -->
+<div class="flex flex-col items-center mb-12">
+<h1 class="font-headline-xl text-[40px] text-primary font-bold">My Playlists</h1>
+</div>
+<!-- 4-Column Playlist Grid as per Reference -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12">
+<!-- Playlist Card Template -->
+<div class="flex flex-col items-center group cursor-pointer">
+<div class="text-center mb-4">
+<h3 class="text-primary font-semibold text-lg">My playlist 1</h3>
+<p class="text-on-surface-variant text-sm">After Hours - The Weeknd</p>
+</div>
+<div class="w-full aspect-[16/9] bg-surface-container-low rounded-xl overflow-hidden border border-outline-variant/10 shadow-lg group-hover:scale-[1.02] transition-transform duration-300">
+<img alt="Playlist Cover" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDl0V8sbUtauLRpfY_5J1nIUJU1bCB98HgPsnGIpRDUN2hmZP6hX_lAvoOlim7DZqfxBZhFk5K_J-HeA1akNHRubdRwa8fw3f19DvhVAKMSpzDI7Ntkdoz82ey9H70srHUWVq8UPI_Yv8HSTfPEoNFkmXhcDA8LpG33feS0d5wAiPibfP7FIIjIiUni1NyEfjWbDw7uUr48xRN3BKyjcEF8A-Ftgte9ucYvmMdkhk3Ogh0yL8E2xkn-B9lZj8cSzCWjD7ZzfMJ1-s4a"/>
+</div>
+</div>
+<div class="flex flex-col items-center group cursor-pointer">
+<div class="text-center mb-4">
+<h3 class="text-primary font-semibold text-lg">My playlist x</h3>
+<p class="text-on-surface-variant text-sm">The Black Album - JAY-Z</p>
+</div>
+<div class="w-full aspect-[16/9] bg-surface-container-low rounded-xl overflow-hidden border border-outline-variant/10 shadow-lg group-hover:scale-[1.02] transition-transform duration-300">
+<img alt="Playlist Cover" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBlh7T12YC4bMmTvikHJ1nlTMGd5f2-WmlOtcTRKrtdMzDHD1FN0Ap6fP9WZLARpYKbR9tNPF01ak2ylcNrL56K9H1xRxQ2POTz03pyJqM1ds1ExEoLTdbTgeiwuvfCPellsKxRGGBFHeCZ7mytVJowAYPOwwEExG9WOiVPSWfRJEYJ_00a4KLSeBQssbsL4kaCVwlp0dqRg7LXUQeEb-Ii_16iWQeg1WJPkGoJ1Ev-5M0AlE9y5kOlauw-SxFQFGGBk0ej80pvm3HO"/>
+</div>
+</div>
+<div class="flex flex-col items-center group cursor-pointer">
+<div class="text-center mb-4">
+<h3 class="text-primary font-semibold text-lg">My playlist x</h3>
+<p class="text-on-surface-variant text-sm">Dangerously In Love - Beyonce</p>
+</div>
+<div class="w-full aspect-[16/9] bg-surface-container-low rounded-xl overflow-hidden border border-outline-variant/10 shadow-lg group-hover:scale-[1.02] transition-transform duration-300">
+<img alt="Playlist Cover" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDIw-SwiaX_44eti0vfXvgdHgFZT2AM34EOGblpXa74cI_bNWidfacavswBbdrK3TldxXW0Xrc_2_ZoK_IdMYBH-9q0lvM9zvnQDP4gDRHiAzSBOAcnWERkkPRDa4aDwxEaOCW0qr8pdlKqusMNjHCw2shG6Z-jwrmjJPXezjwoiNyWgzikjyY6DaCn6-_kSSluIdzhUW-WLBRMV49aGTKhoH61jkvk8niwA39pAtiOl5HuzlXD600gXKH6Fl7Gem5IeuHazF6ivrtZ"/>
+</div>
+</div>
+<div class="flex flex-col items-center group cursor-pointer">
+<div class="text-center mb-4">
+<h3 class="text-primary font-semibold text-lg">My playlist x</h3>
+<p class="text-on-surface-variant text-sm">Example Playlist Mixed - NCS</p>
+</div>
+<div class="w-full aspect-[16/9] bg-surface-container-low rounded-xl overflow-hidden border border-outline-variant/10 shadow-lg group-hover:scale-[1.02] transition-transform duration-300">
+<img alt="Playlist Cover" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3Sc4j6GQzgMGaOCI4jCx_5xJOddiFKGxQ1hfqvIJbce-4i0BVk6un1ciOLnpxEaG3d2-hMAIlca9nQCRlgEGkLJzT6wz1_X2AxvnWvOeLdtHbcLiGIpPazo9csXky3SsJHM80LL2haC6GihEuFhMw1uyXsBFuoufCSoX_mqSFZk-mln9QaAwXFNNKWYfhblThHGtfH5g7fFLQV8d7n-VvJynQueu7JzKFjXVYCxmV6bllWeQEM62uf7_s36d13cmuN-19RcfIrAAw"/>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="flex flex-col items-center group cursor-pointer">
+<div class="text-center mb-4">
+<h3 class="text-primary font-semibold text-lg">My playlist 1</h3>
+<p class="text-on-surface-variant text-sm">After Hours - The Weeknd</p>
+</div>
+<div class="w-full aspect-[16/9] bg-surface-container-low rounded-xl overflow-hidden border border-outline-variant/10 shadow-lg group-hover:scale-[1.02] transition-transform duration-300">
+<img alt="Playlist Cover" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDlu20d6bteGdXihYTA3n4sCAX2PBQM7MIrp_vDeWvdpe1XHGJ9PNF9ObXfszBTthkNgailVDgPU6sG2JJ3uiKQd-SMsMTm5u8o4CVoI9gbCiCxonVFex2ozjOicH74v1ABY2fBHeraRTwExcK8bWehOukIqFYtr0E_FeMbN2FKbaeQNO7wC1uAfLBu_lTwgSeNIYuAUcr2vczEqyF4ZdykiY6hFoJAx85rb70CV10lFT-VoH9i9DlewMqNvAzj1bWESrgeWeYlnim6"/>
+</div>
+</div>
+<div class="flex flex-col items-center group cursor-pointer">
+<div class="text-center mb-4">
+<h3 class="text-primary font-semibold text-lg">My playlist x</h3>
+<p class="text-on-surface-variant text-sm">The Black Album - JAY-Z</p>
+</div>
+<div class="w-full aspect-[16/9] bg-surface-container-low rounded-xl overflow-hidden border border-outline-variant/10 shadow-lg group-hover:scale-[1.02] transition-transform duration-300">
+<img alt="Playlist Cover" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBsJC6hNvnWQk_tZGLm5YOhgg2Ah4VUr0IrYhOFMInc1r77a5TlMjtAmRssKZQi4ZlCB9GFb7Gpeyd8RjJwO7mQzSzncsBMcqwKL0OjNlQT5aHWWa4dchIeRZbEPTh_iagdU5AabE0q2hInaYu-xWqb3ROitYJyPwZMztql1puOkdYUvjKhbu4eO7id9sVqN_1yosp9Gk7ovUP7sCb8h4nfTUaHy8zCWt7UrKCLWq_jSoKJwUBu_idK7XaFReRzyVhfamKptBSW42Xj"/>
+</div>
+</div>
+<div class="flex flex-col items-center group cursor-pointer">
+<div class="text-center mb-4">
+<h3 class="text-primary font-semibold text-lg">My playlist x</h3>
+<p class="text-on-surface-variant text-sm">Dangerously In Love - Beyonce</p>
+</div>
+<div class="w-full aspect-[16/9] bg-surface-container-low rounded-xl overflow-hidden border border-outline-variant/10 shadow-lg group-hover:scale-[1.02] transition-transform duration-300">
+<img alt="Playlist Cover" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIPGicKBfqNVfaWBpeqR-Ob_5rEjGxY4n-da_f8XXqr2v3SJSsI-j1AxAPoux5H6r-27FKmDF26-71u98Gpgy22MV9fmUuXgwONZEqmPGea1G9gfIBuuG8LJaJFgYcMMvc_lpvCAJX5F6YIMv1PrAtM7sM-pBPLJy3nc2ZHNMLU9BWbHJ4zxavAiPLnAQ3Ff79Sl-FrDxBAUZvQ8KLA5NE3CFW8a47a_rMm3bJgUKinhyTBCntSjPXB42R463Z5Sac5HQrWVlG7An9"/>
+</div>
+</div>
+<div class="flex flex-col items-center group cursor-pointer">
+<div class="text-center mb-4 min-h-[60px] flex flex-col justify-center">
+<h3 class="text-primary font-semibold text-lg">My playlist x</h3>
+<p class="text-on-surface-variant text-sm">Example Playlist Mixed - NCS</p>
+</div>
+<div class="w-full aspect-[16/9] bg-surface-container-low rounded-xl overflow-hidden border border-outline-variant/10 shadow-lg group-hover:scale-[1.02] transition-transform duration-300">
+<img alt="Playlist Cover" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCEi-MegL1W5GF_2qYsPYzHNpLTiYfIlGD2I8sGjtP554XJLA5Xa_a6BDtsZg2x4l2FwRZU1_lVJ-Phci72xm0ZLmAOVaFBcGIMhAbsrky3UnUmiIm6ciazK-UH65iB8fbOD9nFBHJQLgFqqGNGDmemmckcqwUw1GsAXmy0F25S_U45zeYe0O_poq7z3uF5PCoCQklos0RlQiBd9SDuT8ZM3Kqx6kG5rBmfNTklD2TVhXEjL46tPcekUfJDh5LAykPGcl9uHMZtdXEl"/>
+</div>
+</div>
+</div>
+<!-- Divider -->
+<div class="w-full h-px bg-outline-variant/30 my-stack-lg"></div>
+<!-- Create New Playlist Section -->
+<div class="flex flex-col gap-6">
+<h2 class="font-headline-md text-headline-md text-primary">Import Playlist</h2>
+<div class="bg-surface-container-low border border-outline-variant/20 rounded-xl p-6 shadow-lg max-w-2xl">
+<div class="flex gap-4"><div class="flex-1">
+<input class="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg px-4 py-3 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary transition-colors font-body-sm" placeholder="YouTube Link..." type="text"/>
+</div>
+<div class="flex-1">
+<input class="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg px-4 py-3 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary transition-colors font-body-sm" placeholder="Playlist name..." type="text"/>
+</div>
+<button class="flex items-center gap-2 bg-surface-container-highest hover:bg-surface-bright text-primary px-6 py-3 rounded-lg font-label-bold transition-colors border border-outline-variant/30">
+<span class="material-symbols-outlined text-[20px]">add</span>
+  Import
+</button></div>
+</div>
+</div></main>
+<!-- Compact Control Bar (Bottom Player) -->
+<div class="fixed bottom-0 w-auto min-w-fit flex justify-center items-center gap-6 bg-surface-container-low border-t border-l border-r border-outline-variant rounded-t-2xl py-4 z-30 shadow-lg px-6 left-1/2 -translate-x-1/2">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[24px]">shuffle</span>
+</button>
+<button class="text-primary hover:text-primary/80 transition-colors">
+<span class="material-symbols-outlined text-[32px]" style="font-variation-settings: 'FILL' 1;">skip_previous</span>
+</button>
+<button class="flex items-center justify-center transition-transform active:scale-95 text-primary hover:text-primary/80">
+<span class="material-symbols-outlined text-[36px]" style="font-variation-settings: 'FILL' 1;">pause</span>
+</button>
+<button class="text-primary hover:text-primary/80 transition-colors">
+<span class="material-symbols-outlined text-[32px]" style="font-variation-settings: 'FILL' 1;">skip_next</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[24px]">repeat</span>
+</button>
+</div>
+<!-- Queue Sidebar (Right) -->
+<aside class="fixed right-0 top-0 w-[280px] h-full bg-surface-container-low border-l border-outline-variant rounded-l-2xl flex flex-col z-20">
+<button class="absolute left-0 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center z-30 text-on-surface-variant hover:text-primary cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-[32px]">chevron_right</span>
+</button>
+<div class="px-6 py-5 border-b border-outline-variant bg-surface-container-low sticky top-0 z-10 flex justify-between items-center mt-4">
+<h3 class="font-headline-md text-headline-md text-primary">Queue</h3>
+<span class="text-on-surface-variant text-xs uppercase tracking-widest font-label-bold">Up Next</span>
+</div>
+<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
+<div class="flex items-center gap-4 p-3 rounded-md hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="w-12 h-12 bg-surface-container rounded border border-outline-variant flex items-center justify-center relative overflow-hidden">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary z-10">music_note</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-body-lg text-body-lg text-primary truncate">Alone Again</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">The Weeknd</p>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">4:10</span>
+</div>
+<div class="flex items-center gap-4 p-3 rounded-md hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="w-12 h-12 bg-surface-container rounded border border-outline-variant flex items-center justify-center relative overflow-hidden">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary z-10">music_note</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-body-lg text-body-lg text-primary truncate">Too Late</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">The Weeknd</p>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">3:59</span>
+</div>
+<div class="flex items-center gap-4 p-3 rounded-md hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="w-12 h-12 bg-surface-container rounded border border-outline-variant flex items-center justify-center relative overflow-hidden">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary z-10">music_note</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-body-lg text-body-lg text-primary truncate">Snowchild</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">The Weeknd</p>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">4:07</span>
+</div>
+<div class="flex items-center gap-4 p-3 rounded-md hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="w-12 h-12 bg-surface-container rounded border border-outline-variant flex items-center justify-center relative overflow-hidden">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary z-10">music_note</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-body-lg text-body-lg text-primary truncate">Heartless</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">The Weeknd</p>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">3:18</span>
+</div>
+</div>
+<div class="p-4 border-t border-outline-variant bg-surface-container-low mb-4">
+<div class="flex flex-col gap-4">
+<h4 class="text-xs uppercase tracking-widest font-label-bold text-on-surface-variant">Now Playing</h4>
+<div class="group relative aspect-video w-full overflow-hidden rounded-lg border border-outline-variant/30">
+<img alt="Blinding Lights Video Thumbnail" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDlu20d6bteGdXihYTA3n4sCAX2PBQM7MIrp_vDeWvdpe1XHGJ9PNF9ObXfszBTthkNgailVDgPU6sG2JJ3uiKQd-SMsMTm5u8o4CVoI9gbCiCxonVFex2ozjOicH74v1ABY2fBHeraRTwExcK8bWehOukIqFYtr0E_FeMbN2FKbaeQNO7wC1uAfLBu_lTwgSeNIYuAUcr2vczEqyF4ZdykiY6hFoJAx85rb70CV10lFT-VoH9i9DlewMqNvAzj1bWESrgeWeYlnim6"/>
+<div class="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-primary text-3xl">play_arrow</span>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="font-body-lg text-body-lg text-primary font-semibold truncate">Blinding Lights</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">The Weeknd</span>
+</div>
+</div>
+</div>
+</aside>
+</body></html>

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Curatore - Player</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "error-container": "#93000a",
+                    "surface-container": "#201f1f",
+                    "on-secondary-fixed-variant": "#474746",
+                    "tertiary-fixed": "#e4e2e1",
+                    "surface-container-lowest": "#0e0e0e",
+                    "on-secondary": "#303030",
+                    "error": "#ffb4ab",
+                    "inverse-on-surface": "#313030",
+                    "primary": "#ffffff",
+                    "on-primary-container": "#636565",
+                    "secondary": "#c8c6c5",
+                    "surface-bright": "#393939",
+                    "primary-container": "#e2e2e2",
+                    "surface-variant": "#353534",
+                    "on-secondary-fixed": "#1b1b1c",
+                    "on-error-container": "#ffdad6",
+                    "surface": "#131313",
+                    "on-secondary-container": "#b7b5b4",
+                    "outline-variant": "#444748",
+                    "surface-tint": "#c6c6c7",
+                    "primary-fixed": "#e2e2e2",
+                    "on-primary": "#2f3131",
+                    "secondary-fixed": "#e5e2e1",
+                    "on-error": "#690005",
+                    "tertiary": "#ffffff",
+                    "tertiary-fixed-dim": "#c8c6c5",
+                    "on-primary-fixed-variant": "#454747",
+                    "surface-dim": "#131313",
+                    "tertiary-container": "#e4e2e1",
+                    "on-primary-fixed": "#1a1c1c",
+                    "surface-container-high": "#2a2a2a",
+                    "surface-container-low": "#1c1b1b",
+                    "on-tertiary-fixed-variant": "#474746",
+                    "surface-container-highest": "#353534",
+                    "secondary-container": "#474746",
+                    "outline": "#8e9192",
+                    "on-background": "#e5e2e1",
+                    "on-tertiary": "#303030",
+                    "on-surface-variant": "#c4c7c8",
+                    "on-tertiary-container": "#656464",
+                    "on-tertiary-fixed": "#1b1c1c",
+                    "inverse-primary": "#5d5f5f",
+                    "inverse-surface": "#e5e2e1",
+                    "secondary-fixed-dim": "#c8c6c5",
+                    "primary-fixed-dim": "#c6c6c7",
+                    "background": "#131313",
+                    "on-surface": "#e5e2e1"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-lg": "2rem",
+                    "gutter": "1.5rem",
+                    "margin-page": "2rem",
+                    "stack-sm": "0.5rem",
+                    "stack-md": "1rem",
+                    "sidebar-width": "280px"
+            },
+            "fontFamily": {
+                    "body-sm": [
+                            "Inter"
+                    ],
+                    "label-bold": [
+                            "Inter"
+                    ],
+                    "body-lg": [
+                            "Inter"
+                    ],
+                    "headline-md": [
+                            "Inter"
+                    ],
+                    "headline-xl": [
+                            "Inter"
+                    ]
+            },
+            "fontSize": {
+                    "body-sm": [
+                            "14px",
+                            {
+                                    "lineHeight": "1.5",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "label-bold": [
+                            "12px",
+                            {
+                                    "lineHeight": "1",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "body-lg": [
+                            "16px",
+                            {
+                                    "lineHeight": "1.6",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "headline-md": [
+                            "20px",
+                            {
+                                    "lineHeight": "1.4",
+                                    "letterSpacing": "-0.01em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-xl": [
+                            "32px",
+                            {
+                                    "lineHeight": "1.2",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #353534; /* surface-variant */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #444748; /* outline-variant */
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-sm text-body-sm antialiased h-screen flex overflow-hidden">
+<!-- SideNavBar -->
+<nav class="bg-surface-container-low dark:bg-surface-container-low fixed left-0 top-0 h-full w-[240px] border-r border-outline-variant dark:border-outline-variant rounded-r-2xl flex flex-col py-margin-page z-20">
+<!-- Toggle Button -->
+<button class="absolute right-0 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center z-30 text-on-surface-variant hover:text-primary cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-[32px]">chevron_left</span>
+</button>
+<!-- Brand Header -->
+<div class="px-gutter mb-stack-lg flex items-center gap-3">
+<div>
+<h1 class="font-headline-xl text-headline-xl text-primary dark:text-primary">Curatore</h1>
+<p class="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-widest mt-1">Media Manager</p>
+</div>
+</div>
+<!-- Main Navigation -->
+<div class="flex-1 flex flex-col gap-1 px-2">
+<!-- Active: Player -->
+<a class="flex items-center gap-3 px-4 py-3 text-primary dark:text-primary font-bold border-l-4 border-primary hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors duration-200 opacity-100 scale-[0.98]" href="#">
+<span class="material-symbols-outlined" data-icon="play_circle">play_circle</span>
+<span class="font-body-lg text-body-lg">Player</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant/70 dark:text-on-surface-variant/70 hover:text-primary border-l-4 border-transparent hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="playlist_play">playlist_play</span>
+<span class="font-body-lg text-body-lg">Playlists</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant/70 dark:text-on-surface-variant/70 hover:text-primary border-l-4 border-transparent hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-body-lg text-body-lg">Social</span>
+</a>
+</div>
+<!-- Footer Navigation -->
+<div class="flex flex-col gap-1 px-2 mt-auto">
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant/70 dark:text-on-surface-variant/70 hover:text-primary border-l-4 border-transparent hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="auto_awesome">auto_awesome</span>
+<span class="font-body-lg text-body-lg">Dynamic</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant/70 dark:text-on-surface-variant/70 hover:text-primary border-l-4 border-transparent hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="explore">explore</span>
+<span class="font-body-lg text-body-lg">Guide</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant/70 dark:text-on-surface-variant/70 hover:text-primary border-l-4 border-transparent hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-lg text-body-lg">Settings</span>
+</a>
+</div>
+<!-- User Profile -->
+<div class="flex items-center gap-3 px-4 py-4 mt-2 border-t border-outline-variant/50">
+<div class="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant">person</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-body-sm font-semibold text-primary truncate">Example User</p>
+<p class="text-[11px] text-on-surface-variant truncate">user@curatore.com</p>
+</div>
+</div>
+</nav>
+<!-- TopNavBar -->
+<header class="bg-background dark:bg-background docked full-width top-0 z-10 flex justify-between items-center h-16 px-gutter ml-[240px] w-[calc(100%-520px)] fixed">
+<div class="flex-1">
+<!-- Search placeholder if needed, though search_bar is "on_right" in JSON -->
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant">
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-[240px] mr-[280px] mt-16 flex-1 w-[calc(100%-520px)] h-[calc(100vh-4rem)] overflow-y-auto p-margin-page pb-32 flex flex-col gap-gutter relative">
+<!-- Left Side: Player Area -->
+<div class="flex-1 flex flex-col min-w-0 h-full">
+<!-- Video Player Placeholder -->
+<div class="w-full aspect-video mt-12 bg-surface-container border border-outline-variant rounded-lg overflow-hidden relative group mb-stack-lg">
+<div class="w-full h-full bg-surface-variant flex items-center justify-center opacity-80 group-hover:opacity-100 transition-opacity duration-300">
+<span class="material-symbols-outlined text-[64px] text-on-surface-variant/30">play_circle</span>
+</div>
+<!-- Overlay Gradient -->
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"></div>
+<!-- Center Play Button (Visual indicator) -->
+<div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+<div class="w-16 h-16 bg-black/50 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/20">
+<span class="material-symbols-outlined text-white text-4xl" data-icon="play_arrow" data-weight="fill" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+</div>
+<!-- Fake YouTube UI Elements -->
+</div>
+<!-- Track Info -->
+<div class="flex flex-col items-center text-center mt-6 mb-auto">
+<h2 class="font-headline-xl text-headline-xl text-primary font-bold tracking-tight mb-2">Blinding Lights</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant mb-stack-lg">The Weeknd</p>
+</div>
+</div>
+</main>
+<!-- High-end Control Bar Fixed to Bottom -->
+<div class="fixed bottom-0 w-auto min-w-fit flex justify-center items-center gap-6 bg-surface-container-low border-t border-l border-r border-outline-variant rounded-t-2xl py-4 z-30 shadow-lg px-6 left-1/2 -translate-x-1/2">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[24px]" data-icon="shuffle">shuffle</span>
+</button>
+<button class="text-primary hover:text-primary/80 transition-colors">
+<span class="material-symbols-outlined text-[32px]" data-icon="skip_previous" data-weight="fill" style="font-variation-settings: 'FILL' 1;">skip_previous</span>
+</button>
+<button class="flex items-center justify-center transition-transform active:scale-95 text-primary hover:text-primary/80">
+<span class="material-symbols-outlined text-[36px]" data-icon="pause" data-weight="fill" style="font-variation-settings: 'FILL' 1;">pause</span>
+</button>
+<button class="text-primary hover:text-primary/80 transition-colors">
+<span class="material-symbols-outlined text-[32px]" data-icon="skip_next" data-weight="fill" style="font-variation-settings: 'FILL' 1;">skip_next</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[24px]" data-icon="repeat">repeat</span>
+</button>
+</div>
+<!-- Right Side: Queue Panel -->
+<aside class="fixed right-0 top-0 w-[280px] flex-shrink-0 flex flex-col bg-surface-container-low border-l border-outline-variant rounded-l-2xl overflow-visible h-full z-20">
+<button class="absolute left-0 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center z-30 text-on-surface-variant hover:text-primary cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-[32px]">chevron_right</span>
+</button>
+<div class="px-6 py-5 border-b border-outline-variant bg-surface-container-low sticky top-0 z-10 flex justify-between items-center mt-4">
+<h3 class="font-headline-md text-headline-md text-primary">Queue</h3>
+<span class="text-on-surface-variant text-xs uppercase tracking-widest font-label-bold">Up Next</span>
+</div>
+<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
+<div class="flex items-center gap-4 p-3 rounded-md hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="w-12 h-12 bg-surface-container rounded border border-outline-variant flex items-center justify-center relative overflow-hidden">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary z-10">music_note</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-body-lg text-body-lg text-primary truncate">Alone Again</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">The Weeknd</p>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">4:10</span>
+</div>
+<div class="flex items-center gap-4 p-3 rounded-md hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="w-12 h-12 bg-surface-container rounded border border-outline-variant flex items-center justify-center relative overflow-hidden">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary z-10">music_note</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-body-lg text-body-lg text-primary truncate">Too Late</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">The Weeknd</p>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">3:59</span>
+</div>
+<div class="flex items-center gap-4 p-3 rounded-md hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="w-12 h-12 bg-surface-container rounded border border-outline-variant flex items-center justify-center relative overflow-hidden">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary z-10">music_note</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-body-lg text-body-lg text-primary truncate">Snowchild</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">The Weeknd</p>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">4:07</span>
+</div>
+<div class="flex items-center gap-4 p-3 rounded-md hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="w-12 h-12 bg-surface-container rounded border border-outline-variant flex items-center justify-center relative overflow-hidden">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary z-10">music_note</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-body-lg text-body-lg text-primary truncate">Heartless</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">The Weeknd</p>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">3:18</span>
+</div>
+</div>
+<div class="p-4 border-t border-outline-variant bg-surface-container-low mb-4">
+<div class="flex flex-col gap-4 mb-4">
+<h4 class="text-xs uppercase tracking-widest font-label-bold text-on-surface-variant">Now Playing</h4>
+<div class="group relative aspect-video w-full overflow-hidden rounded-lg border border-outline-variant/30">
+<img alt="Blinding Lights Video Thumbnail" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDlu20d6bteGdXihYTA3n4sCAX2PBQM7MIrp_vDeWvdpe1XHGJ9PNF9ObXfszBTthkNgailVDgPU6sG2JJ3uiKQd-SMsMTm5u8o4CVoI9gbCiCxonVFex2ozjOicH74v1ABY2fBHeraRTwExcK8bWehOukIqFYtr0E_FeMbN2FKbaeQNO7wC1uAfLBu_lTwgSeNIYuAUcr2vczEqyF4ZdykiY6hFoJAx85rb70CV10lFT-VoH9i9DlewMqNvAzj1bWESrgeWeYlnim6"/>
+<div class="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-primary text-3xl">play_arrow</span>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="font-body-lg text-body-lg text-primary font-semibold truncate">Blinding Lights</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">The Weeknd</span>
+</div>
+</div>
+</div>
+</aside>
+</body></html>
