@@ -3,8 +3,6 @@
 import {
   ArrowLeft,
   CalendarClock,
-  ChevronDown,
-  ChevronUp,
   Copy,
   GripVertical,
   MoreHorizontal,
@@ -537,26 +535,6 @@ export default function PlaylistDetailPage() {
                         setTransfer({ ids: [video.id], mode: "move" });
                         setOpenMenuId(null);
                       }}
-                      onMoveDown={
-                        index < playlist.videos.length - 1
-                          ? () =>
-                              reorderPlaylistVideos(
-                                playlist.id,
-                                index,
-                                index + 1
-                              )
-                          : undefined
-                      }
-                      onMoveUp={
-                        index > 0
-                          ? () =>
-                              reorderPlaylistVideos(
-                                playlist.id,
-                                index,
-                                index - 1
-                              )
-                          : undefined
-                      }
                       onRemove={() => {
                         setRemoveIds([video.id]);
                         setOpenMenuId(null);
@@ -759,8 +737,8 @@ function TagPills({ keywords }: { keywords: SongMetadata["keywords"] }) {
           key={keyword.name}
         >
           <span className="truncate">{keyword.name}</span>
-          <span className="pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] px-2 py-1 text-[9px] text-zinc-200 shadow-lg group-hover/tag:block">
-            {keyword.rating}/10 match
+          <span className="pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden h-6 -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-md border border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] px-2 text-[9px] leading-none text-zinc-200 shadow-lg group-hover/tag:flex">
+            {keyword.rating}/10
           </span>
         </span>
       ))}
@@ -776,8 +754,6 @@ function BulkToolbar({
   onCopy,
   onEdit,
   onMove,
-  onMoveDown,
-  onMoveUp,
   onRemove,
   onToggleAll
 }: {
@@ -788,8 +764,6 @@ function BulkToolbar({
   onCopy: () => void;
   onEdit: () => void;
   onMove: () => void;
-  onMoveDown?: () => void;
-  onMoveUp?: () => void;
   onRemove: () => void;
   onToggleAll: () => void;
 }) {
@@ -877,8 +851,6 @@ function SongMenu({
   onClose,
   onCopy,
   onMove,
-  onMoveDown,
-  onMoveUp,
   onRemove,
   onTrim,
   video
@@ -886,8 +858,6 @@ function SongMenu({
   onClose: () => void;
   onCopy: () => void;
   onMove: () => void;
-  onMoveDown?: () => void;
-  onMoveUp?: () => void;
   onRemove: () => void;
   onTrim: (updates: Partial<VideoItem>) => void;
   video: VideoItem;
@@ -910,26 +880,6 @@ function SongMenu({
         <MoveRight aria-hidden="true" className="h-4 w-4" />
         Move to playlist
       </button>
-      <div className="grid grid-cols-2 gap-1 border-t border-zinc-200 p-1 pt-2 dark:border-white/10">
-        <button
-          className="flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-xs text-zinc-600 transition hover:bg-zinc-100 disabled:opacity-30 dark:text-zinc-300 dark:hover:bg-white/5"
-          disabled={!onMoveUp}
-          onClick={onMoveUp}
-          type="button"
-        >
-          <ChevronUp aria-hidden="true" className="h-4 w-4" />
-          Earlier
-        </button>
-        <button
-          className="flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-xs text-zinc-600 transition hover:bg-zinc-100 disabled:opacity-30 dark:text-zinc-300 dark:hover:bg-white/5"
-          disabled={!onMoveDown}
-          onClick={onMoveDown}
-          type="button"
-        >
-          <ChevronDown aria-hidden="true" className="h-4 w-4" />
-          Later
-        </button>
-      </div>
       <div className="my-1 border-t border-zinc-200 px-3 py-2 dark:border-white/10">
         <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
           Playback trim
@@ -947,6 +897,7 @@ function SongMenu({
           />
         </div>
       </div>
+      <div className="mx-3 my-1 border-t border-zinc-200 dark:border-white/10" />
       <button
         className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-red-500 transition hover:bg-red-500/10"
         onClick={onRemove}
@@ -977,13 +928,15 @@ function TrimField({
   value?: number;
 }) {
   return (
-    <label>
-      <span className="sr-only">{label}</span>
+    <label className="space-y-1">
+      <span className="block text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
+        {label}
+      </span>
       <input
         className="h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 text-xs outline-none focus:border-accent dark:border-white/10 dark:bg-neutral-900"
         defaultValue={formatTime(value)}
         onBlur={(event) => onChange(parseTime(event.target.value))}
-        placeholder={`${label} 0:00`}
+        placeholder="00:00"
       />
     </label>
   );
@@ -1136,8 +1089,8 @@ function SongInlineEditor({
                   >
                     <X aria-hidden="true" className="h-3 w-3" />
                   </button>
-                  <span className="pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] px-2 py-1 text-[9px] text-zinc-200 shadow-lg group-hover/tag:block">
-                    {keyword.rating}/10 match
+                  <span className="pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden h-6 -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-md border border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] px-2 text-[9px] leading-none text-zinc-200 shadow-lg group-hover/tag:flex">
+                    {keyword.rating}/10
                   </span>
                 </span>
               ))}
