@@ -328,9 +328,9 @@ export default function PlaylistDetailPage() {
             <span />
             <span />
             <span className="text-center">Song</span>
-            <span className="text-center">Frequency</span>
-            <span className="text-center">Rating</span>
-            <span className="text-center">Tags</span>
+            <span>Frequency</span>
+            <span>Rating</span>
+            <span>Tags</span>
             <span />
           </div>
           {playlist.videos.map((video, index) => {
@@ -365,7 +365,7 @@ export default function PlaylistDetailPage() {
             ) : null;
             return (
               <div
-                className={`relative flex items-center gap-3 border-b border-zinc-200 p-3 transition last:border-b-0 dark:border-white/10 ${
+                className={`relative flex items-center gap-3 border-b border-zinc-200 p-3 transition last:border-b-0 dark:border-white/10 2xl:grid 2xl:grid-cols-[1.25rem_2rem_6rem_minmax(0,1fr)_6rem_6rem_10rem_2.5rem] ${
                   isSelected ? "bg-accent-subtle" : "hover:bg-zinc-50/80 dark:hover:bg-white/[0.025]"
                 }`}
                 draggable
@@ -433,7 +433,11 @@ export default function PlaylistDetailPage() {
                       ariaLabel={`Set play frequency for ${video.title}`}
                       editor={editorKind === "frequency" ? editor : null}
                       icon={Repeat2}
-                      label={`${video.playFrequency ?? 1}x`}
+                      label={
+                        (video.playFrequency ?? 1) === 1
+                          ? null
+                          : `${video.playFrequency}x`
+                      }
                       onClick={() =>
                         toggleInlineEditor(video.id, "frequency")
                       }
@@ -444,7 +448,7 @@ export default function PlaylistDetailPage() {
                       editor={editorKind === "rating" ? editor : null}
                       icon={Star}
                       label={
-                        metadata.rating ? `${metadata.rating}/5` : "—"
+                        metadata.rating ? `${metadata.rating}/5` : null
                       }
                       onClick={() => toggleInlineEditor(video.id, "rating")}
                     />
@@ -458,8 +462,8 @@ export default function PlaylistDetailPage() {
                     />
                   </div>
                 </div>
-                <div className="relative hidden shrink-0 items-center 2xl:flex">
-                  <div className="relative flex w-24 items-center gap-1">
+                <div className="hidden 2xl:contents">
+                  <div className="relative grid w-full grid-cols-[2rem_minmax(0,1fr)] items-center gap-1">
                     <button
                       aria-label={`Set play frequency for ${video.title}`}
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
@@ -470,14 +474,14 @@ export default function PlaylistDetailPage() {
                     >
                       <Repeat2 aria-hidden="true" className="h-4 w-4" />
                     </button>
-                    <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                      {(video.playFrequency ?? 1) === 1
-                        ? "Default"
-                        : `${video.playFrequency}x`}
-                    </span>
+                    {(video.playFrequency ?? 1) === 1 ? null : (
+                      <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                        {video.playFrequency}x
+                      </span>
+                    )}
                     {editorKind === "frequency" ? editor : null}
                   </div>
-                  <div className="relative flex w-24 items-center gap-1">
+                  <div className="relative grid w-full grid-cols-[2rem_minmax(0,1fr)] items-center gap-1">
                     <button
                       aria-label={`Rate ${video.title}`}
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
@@ -493,12 +497,14 @@ export default function PlaylistDetailPage() {
                         }`}
                       />
                     </button>
-                    <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                      {metadata.rating ? `${metadata.rating}/5` : "Unrated"}
-                    </span>
+                    {metadata.rating ? (
+                      <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                        {metadata.rating}/5
+                      </span>
+                    ) : null}
                     {editorKind === "rating" ? editor : null}
                   </div>
-                  <div className="relative flex w-40 items-center gap-1">
+                  <div className="relative flex w-full items-center gap-1">
                     <button
                       aria-label={`Edit tags for ${video.title}`}
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
@@ -514,7 +520,7 @@ export default function PlaylistDetailPage() {
                 <div className="relative shrink-0">
                   <button
                     aria-label={`More actions for ${video.title}`}
-                    className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white"
                     onClick={() =>
                       setOpenMenuId((current) =>
                         current === video.id ? null : video.id
@@ -726,7 +732,7 @@ function CompactSongControl({
 
 function TagPills({ keywords }: { keywords: SongMetadata["keywords"] }) {
   if (keywords.length === 0) {
-    return <span>—</span>;
+    return null;
   }
 
   const sortedKeywords = [...keywords]
