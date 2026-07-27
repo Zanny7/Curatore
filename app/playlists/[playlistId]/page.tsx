@@ -32,6 +32,7 @@ import type {
 } from "@/types";
 
 type TransferMode = "copy" | "move";
+type InlineEditorKind = "frequency" | "rating" | "tags";
 
 export default function PlaylistDetailPage() {
   const router = useRouter();
@@ -62,9 +63,10 @@ export default function PlaylistDetailPage() {
   );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [ratingVideo, setRatingVideo] = useState<VideoItem | null>(null);
-  const [tagsVideo, setTagsVideo] = useState<VideoItem | null>(null);
-  const [frequencyVideo, setFrequencyVideo] = useState<VideoItem | null>(null);
+  const [inlineEditor, setInlineEditor] = useState<{
+    kind: InlineEditorKind;
+    videoId: string;
+  } | null>(null);
   const [transfer, setTransfer] = useState<{
     ids: string[];
     mode: TransferMode;
@@ -141,6 +143,14 @@ export default function PlaylistDetailPage() {
       allSelected
         ? new Set()
         : new Set(playlist?.videos.map((video) => video.id) ?? [])
+    );
+  }
+
+  function toggleInlineEditor(videoId: string, kind: InlineEditorKind) {
+    setInlineEditor((current) =>
+      current?.videoId === videoId && current.kind === kind
+        ? null
+        : { kind, videoId }
     );
   }
 
@@ -328,6 +338,8 @@ export default function PlaylistDetailPage() {
           {playlist.videos.map((video, index) => {
             const metadata = songMetadata[video.id] ?? { keywords: [] };
             const isSelected = selectedIds.has(video.id);
+            const editorKind =
+              inlineEditor?.videoId === video.id ? inlineEditor.kind : null;
             return (
               <div
                 className={`relative flex items-center gap-3 border-b border-zinc-200 p-3 transition last:border-b-0 dark:border-white/10 ${
@@ -393,11 +405,13 @@ export default function PlaylistDetailPage() {
                     {video.channelTitle}
                     {video.duration ? ` · ${video.duration}` : ""}
                   </p>
-                  <div className="mt-2 flex items-center gap-1 2xl:hidden">
+                  <div className="relative mt-2 flex items-center gap-1 2xl:hidden">
                     <CompactSongControl
                       icon={Repeat2}
                       label={`${video.playFrequency ?? 1}x`}
-                      onClick={() => setFrequencyVideo(video)}
+                      onClick={() =>
+                        toggleInlineEditor(video.id, "frequency")
+                      }
                     />
                     <CompactSongControl
                       active={Boolean(metadata.rating)}
@@ -405,7 +419,7 @@ export default function PlaylistDetailPage() {
                       label={
                         metadata.rating ? `${metadata.rating}/10` : "—"
                       }
-                      onClick={() => setRatingVideo(video)}
+                      onClick={() => toggleInlineEditor(video.id, "rating")}
                     />
                     <CompactSongControl
                       active={metadata.keywords.length > 0}
@@ -415,53 +429,120 @@ export default function PlaylistDetailPage() {
                           ? String(metadata.keywords.length)
                           : "—"
                       }
-                      onClick={() => setTagsVideo(video)}
+                      onClick={() => toggleInlineEditor(video.id, "tags")}
                     />
+                    {editorKind ? (
+                      <SongInlineEditor
+                        frequency={video.playFrequency ?? 1}
+                        kind={editorKind}
+                        metadata={metadata}
+                        onClose={() => setInlineEditor(null)}
+                        onSaveFrequency={(frequency) => {
+                          setPlaylistVideoFrequency(
+                            playlist.id,
+                            [video.id],
+                            frequency
+                          );
+                          setInlineEditor(null);
+                        }}
+                        onSaveRating={(rating) => {
+                          updateSongMetadata(video.id, {
+                            ...metadata,
+                            rating
+                          });
+                          setInlineEditor(null);
+                        }}
+                        onSaveTags={(keywords) => {
+                          updateSongMetadata(video.id, {
+                            ...metadata,
+                            keywords
+                          });
+                          setInlineEditor(null);
+                        }}
+                        suggestions={tagSuggestions}
+                      />
+                    ) : null}
                   </div>
                 </div>
-                <button
-                  aria-label={`Set play frequency for ${video.title}`}
-                  className="hidden w-24 shrink-0 items-center gap-2 rounded-lg px-2 py-2 text-sm text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5 2xl:flex"
-                  onClick={() => setFrequencyVideo(video)}
-                  type="button"
-                >
-                  <Repeat2 aria-hidden="true" className="h-4 w-4" />
-                  {(video.playFrequency ?? 1) === 1
-                    ? "Default"
-                    : `${video.playFrequency}x`}
-                </button>
-                <button
-                  aria-label={`Rate ${video.title}`}
-                  className="hidden w-24 shrink-0 items-center gap-2 rounded-lg px-2 py-2 text-sm text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5 2xl:flex"
-                  onClick={() => setRatingVideo(video)}
-                  type="button"
-                >
-                  <Star
-                    aria-hidden="true"
-                    className={`h-4 w-4 ${
-                      metadata.rating
-                        ? "fill-[var(--accent)] text-[var(--accent)]"
-                        : ""
-                    }`}
-                  />
-                  {metadata.rating ? `${metadata.rating}/10` : "Unrated"}
-                </button>
-                <button
-                  aria-label={`Edit tags for ${video.title}`}
-                  className="hidden w-40 shrink-0 items-center gap-2 overflow-hidden rounded-lg px-2 py-2 text-left text-xs text-zinc-500 transition hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-white/5 2xl:flex"
-                  onClick={() => setTagsVideo(video)}
-                  type="button"
-                >
-                  <Tags aria-hidden="true" className="h-4 w-4 shrink-0" />
-                  <span className="truncate">
-                    {metadata.keywords.length > 0
-                      ? metadata.keywords
-                          .slice(0, 2)
-                          .map((keyword) => `${keyword.name} ${keyword.rating}`)
-                          .join(" · ")
-                      : "Add tags"}
-                  </span>
-                </button>
+                <div className="relative hidden shrink-0 items-center 2xl:flex">
+                  <button
+                    aria-label={`Set play frequency for ${video.title}`}
+                    className="flex w-24 items-center gap-2 rounded-lg px-2 py-2 text-sm text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
+                    onClick={() =>
+                      toggleInlineEditor(video.id, "frequency")
+                    }
+                    type="button"
+                  >
+                    <Repeat2 aria-hidden="true" className="h-4 w-4" />
+                    {(video.playFrequency ?? 1) === 1
+                      ? "Default"
+                      : `${video.playFrequency}x`}
+                  </button>
+                  <button
+                    aria-label={`Rate ${video.title}`}
+                    className="flex w-24 items-center gap-2 rounded-lg px-2 py-2 text-sm text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
+                    onClick={() => toggleInlineEditor(video.id, "rating")}
+                    type="button"
+                  >
+                    <Star
+                      aria-hidden="true"
+                      className={`h-4 w-4 ${
+                        metadata.rating
+                          ? "fill-[var(--accent)] text-[var(--accent)]"
+                          : ""
+                      }`}
+                    />
+                    {metadata.rating ? `${metadata.rating}/10` : "Unrated"}
+                  </button>
+                  <button
+                    aria-label={`Edit tags for ${video.title}`}
+                    className="flex w-40 items-center gap-2 overflow-hidden rounded-lg px-2 py-2 text-left text-xs text-zinc-500 transition hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-white/5"
+                    onClick={() => toggleInlineEditor(video.id, "tags")}
+                    type="button"
+                  >
+                    <Tags aria-hidden="true" className="h-4 w-4 shrink-0" />
+                    <span className="truncate">
+                      {metadata.keywords.length > 0
+                        ? metadata.keywords
+                            .slice(0, 2)
+                            .map(
+                              (keyword) =>
+                                `${keyword.name} ${keyword.rating}`
+                            )
+                            .join(" · ")
+                        : "Add tags"}
+                    </span>
+                  </button>
+                  {editorKind ? (
+                    <SongInlineEditor
+                      align="right"
+                      frequency={video.playFrequency ?? 1}
+                      kind={editorKind}
+                      metadata={metadata}
+                      onClose={() => setInlineEditor(null)}
+                      onSaveFrequency={(frequency) => {
+                        setPlaylistVideoFrequency(
+                          playlist.id,
+                          [video.id],
+                          frequency
+                        );
+                        setInlineEditor(null);
+                      }}
+                      onSaveRating={(rating) => {
+                        updateSongMetadata(video.id, { ...metadata, rating });
+                        setInlineEditor(null);
+                      }}
+                      onSaveTags={(keywords) => {
+                        updateSongMetadata(video.id, {
+                          ...metadata,
+                          keywords
+                        });
+                        setInlineEditor(null);
+                      }}
+                      suggestions={tagSuggestions}
+                    />
+                  ) : null}
+                </div>
                 <div className="relative shrink-0">
                   <button
                     aria-label={`More actions for ${video.title}`}
@@ -531,58 +612,6 @@ export default function PlaylistDetailPage() {
           </p>
         </div>
       )}
-
-      {ratingVideo ? (
-        <MetadataDialog
-          initial={songMetadata[ratingVideo.id] ?? { keywords: [] }}
-          mode="rating"
-          onClose={() => setRatingVideo(null)}
-          onSave={(metadata) => {
-            const current = songMetadata[ratingVideo.id] ?? { keywords: [] };
-            updateSongMetadata(ratingVideo.id, {
-              ...current,
-              rating: metadata.rating
-            });
-            setRatingVideo(null);
-          }}
-          suggestions={tagSuggestions}
-          title={ratingVideo.title}
-        />
-      ) : null}
-
-      {tagsVideo ? (
-        <MetadataDialog
-          initial={songMetadata[tagsVideo.id] ?? { keywords: [] }}
-          mode="tags"
-          onClose={() => setTagsVideo(null)}
-          onSave={(metadata) => {
-            const current = songMetadata[tagsVideo.id] ?? { keywords: [] };
-            updateSongMetadata(tagsVideo.id, {
-              ...current,
-              keywords: metadata.keywords
-            });
-            setTagsVideo(null);
-          }}
-          suggestions={tagSuggestions}
-          title={tagsVideo.title}
-        />
-      ) : null}
-
-      {frequencyVideo ? (
-        <FrequencyDialog
-          initial={frequencyVideo.playFrequency ?? 1}
-          onClose={() => setFrequencyVideo(null)}
-          onSave={(frequency) => {
-            setPlaylistVideoFrequency(
-              playlist.id,
-              [frequencyVideo.id],
-              frequency
-            );
-            setFrequencyVideo(null);
-          }}
-          title={frequencyVideo.title}
-        />
-      ) : null}
 
       {showBulkMetadata ? (
         <BulkMetadataDialog
@@ -958,233 +987,217 @@ function TrimField({
   );
 }
 
-function MetadataDialog({
-  initial,
-  mode,
+function SongInlineEditor({
+  align = "left",
+  frequency,
+  kind,
+  metadata,
   onClose,
-  onSave,
-  suggestions,
-  title
+  onSaveFrequency,
+  onSaveRating,
+  onSaveTags,
+  suggestions
 }: {
-  initial: SongMetadata;
-  mode: "rating" | "tags";
+  align?: "left" | "right";
+  frequency: number;
+  kind: InlineEditorKind;
+  metadata: SongMetadata;
   onClose: () => void;
-  onSave: (metadata: SongMetadata) => void;
+  onSaveFrequency: (frequency: number) => void;
+  onSaveRating: (rating: number) => void;
+  onSaveTags: (keywords: SongMetadata["keywords"]) => void;
   suggestions: string[];
-  title: string;
 }) {
-  const [rating, setRating] = useState(initial.rating);
-  const [keywords, setKeywords] = useState(initial.keywords);
+  const [keywords, setKeywords] = useState(metadata.keywords);
+  const [tagName, setTagName] = useState("");
+  const [tagRating, setTagRating] = useState(5);
+  const unusedSuggestions = suggestions.filter(
+    (suggestion) =>
+      !keywords.some(
+        (keyword) =>
+          keyword.name.toLocaleLowerCase() === suggestion.toLocaleLowerCase()
+      )
+  );
+
+  function addTag(name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      return;
+    }
+    setKeywords((current) => [
+      ...current.filter(
+        (keyword) =>
+          keyword.name.toLocaleLowerCase() !== trimmed.toLocaleLowerCase()
+      ),
+      { name: trimmed, rating: tagRating }
+    ]);
+    setTagName("");
+  }
+
+  function submitTag(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    addTag(tagName);
+  }
 
   return (
-    <Modal onClose={onClose}>
-      <p className="text-accent text-xs font-semibold uppercase tracking-[0.18em]">
-        {mode === "rating" ? "Song rating" : "Song tags"}
-      </p>
-      <h2 className="mt-2 truncate text-2xl font-bold text-white">{title}</h2>
-      {mode === "rating" ? (
-      <div className="mt-6">
-        <p className="text-sm font-semibold text-zinc-200">Overall rating</p>
-        <div className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-10">
-          {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => (
+    <div
+      className={`absolute top-[calc(100%+0.45rem)] z-50 w-[min(18rem,calc(100vw-2rem))] rounded-xl border border-zinc-200 bg-white p-3 text-left shadow-2xl dark:border-white/10 dark:bg-neutral-950 ${
+        align === "right" ? "right-0" : "right-0 2xl:left-0 2xl:right-auto"
+      }`}
+      draggable={false}
+      onClick={(event) => event.stopPropagation()}
+      onDragStart={(event) => event.preventDefault()}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-zinc-950 dark:text-white">
+          {kind === "frequency"
+            ? "Set Frequency"
+            : kind === "rating"
+              ? "Set Rating"
+              : "Add Tags"}
+        </p>
+        <button
+          aria-label="Close editor"
+          className="flex h-7 w-7 items-center justify-center rounded-full text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-950 dark:hover:bg-white/5 dark:hover:text-white"
+          onClick={onClose}
+          type="button"
+        >
+          <X aria-hidden="true" className="h-4 w-4" />
+        </button>
+      </div>
+
+      {kind === "frequency" ? (
+        <div className="mt-3 grid grid-cols-5 gap-1.5">
+          {[1, 2, 3, 4, 5].map((value) => (
             <button
-              aria-pressed={rating === value}
-              className={`h-9 rounded-lg border text-sm font-semibold transition ${
-                rating === value
+              aria-pressed={frequency === value}
+              className={`h-9 rounded-lg border text-xs font-semibold transition ${
+                frequency === value
                   ? "border-[var(--accent)] bg-[var(--accent)] text-black"
-                  : "border-white/10 text-zinc-400 hover:border-[var(--accent)] hover:text-white"
+                  : "border-zinc-200 text-zinc-500 hover:border-[var(--accent)] hover:text-accent-strong dark:border-white/10 dark:text-zinc-300"
               }`}
               key={value}
-              onClick={() => setRating(value)}
+              onClick={() => onSaveFrequency(value)}
+              type="button"
+            >
+              {value}x
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {kind === "rating" ? (
+        <div className="mt-3 grid grid-cols-5 gap-1.5">
+          {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => (
+            <button
+              aria-pressed={metadata.rating === value}
+              className={`h-8 rounded-lg border text-xs font-semibold transition ${
+                metadata.rating === value
+                  ? "border-[var(--accent)] bg-[var(--accent)] text-black"
+                  : "border-zinc-200 text-zinc-500 hover:border-[var(--accent)] hover:text-accent-strong dark:border-white/10 dark:text-zinc-300"
+              }`}
+              key={value}
+              onClick={() => onSaveRating(value)}
               type="button"
             >
               {value}
             </button>
           ))}
         </div>
-      </div>
       ) : null}
-      {mode === "tags" ? (
-      <div className="mt-7">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-zinc-200">Tags</p>
-          <button
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-400 transition hover:text-accent-strong"
-            onClick={() =>
-              setKeywords((current) => [
-                ...current,
-                { name: "", rating: 5 }
-              ])
-            }
-            type="button"
-          >
-            <Plus aria-hidden="true" className="h-4 w-4" />
-            Add tag
-          </button>
-        </div>
-        <div className="mt-3 max-h-64 space-y-2 overflow-y-auto">
+
+      {kind === "tags" ? (
+        <div className="mt-3 space-y-3">
           {keywords.length > 0 ? (
-            keywords.map((keyword, index) => (
-              <div
-                className="grid grid-cols-[minmax(0,1fr)_5rem_2rem] gap-2"
-                key={`${index}-${keyword.name}`}
-              >
-                <input
-                  aria-label="Tag"
-                  className="h-10 rounded-lg border border-white/10 bg-neutral-900 px-3 text-sm text-white outline-none focus:border-accent"
-                  list="curatore-tag-suggestions"
-                  onChange={(event) =>
-                    setKeywords((current) =>
-                      current.map((item, itemIndex) =>
-                        itemIndex === index
-                          ? { ...item, name: event.target.value }
-                          : item
-                      )
-                    )
-                  }
-                  placeholder={'Enter a tag, e.g. "Pop"'}
-                  value={keyword.name}
-                />
-                <select
-                  aria-label={`Match for ${keyword.name || "tag"}`}
-                  className="h-10 rounded-lg border border-white/10 bg-neutral-900 px-2 text-sm text-white outline-none focus:border-accent"
-                  onChange={(event) =>
-                    setKeywords((current) =>
-                      current.map((item, itemIndex) =>
-                        itemIndex === index
-                          ? { ...item, rating: Number(event.target.value) }
-                          : item
-                      )
-                    )
-                  }
-                  value={keyword.rating}
+            <div className="flex flex-wrap gap-1.5">
+              {keywords.map((keyword) => (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-semibold text-accent-strong"
+                  key={keyword.name}
                 >
-                  {Array.from({ length: 10 }, (_, item) => item + 1).map(
-                    (value) => (
-                      <option key={value} value={value}>
-                        {value}/10
-                      </option>
-                    )
-                  )}
-                </select>
-                <button
-                  aria-label={`Remove ${keyword.name || "tag"}`}
-                  className="flex h-10 items-center justify-center text-zinc-500 transition hover:text-red-400"
-                  onClick={() =>
-                    setKeywords((current) =>
-                      current.filter((_, itemIndex) => itemIndex !== index)
-                    )
-                  }
-                  type="button"
-                >
-                  <X aria-hidden="true" className="h-4 w-4" />
-                </button>
+                  {keyword.name} {keyword.rating}/10
+                  <button
+                    aria-label={`Remove ${keyword.name}`}
+                    className="rounded-full hover:text-red-400"
+                    onClick={() =>
+                      setKeywords((current) =>
+                        current.filter(
+                          (item) => item.name !== keyword.name
+                        )
+                      )
+                    }
+                    type="button"
+                  >
+                    <X aria-hidden="true" className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          <form
+            className="grid grid-cols-[minmax(0,1fr)_4.5rem_2rem] gap-1.5"
+            onSubmit={submitTag}
+          >
+            <input
+              aria-label="Tag name"
+              className="h-9 min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-xs text-zinc-950 outline-none focus:border-accent dark:border-white/10 dark:bg-neutral-900 dark:text-white"
+              onChange={(event) => setTagName(event.target.value)}
+              placeholder={'e.g. "Pop"'}
+              value={tagName}
+            />
+            <select
+              aria-label="Tag match"
+              className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-1 text-xs text-zinc-950 outline-none focus:border-accent dark:border-white/10 dark:bg-neutral-900 dark:text-white"
+              onChange={(event) => setTagRating(Number(event.target.value))}
+              value={tagRating}
+            >
+              {Array.from({ length: 10 }, (_, index) => index + 1).map(
+                (value) => (
+                  <option key={value} value={value}>
+                    {value}/10
+                  </option>
+                )
+              )}
+            </select>
+            <button
+              aria-label="Add tag"
+              className="flex h-9 items-center justify-center rounded-lg border border-zinc-200 text-zinc-500 transition hover:border-accent hover:text-accent-strong dark:border-white/10"
+              type="submit"
+            >
+              <Plus aria-hidden="true" className="h-4 w-4" />
+            </button>
+          </form>
+
+          {unusedSuggestions.length > 0 ? (
+            <div>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
+                Previously used
+              </p>
+              <div className="flex max-h-20 flex-wrap gap-1.5 overflow-y-auto">
+                {unusedSuggestions.map((suggestion) => (
+                  <button
+                    className="rounded-full border border-zinc-200 px-2.5 py-1 text-[11px] text-zinc-500 transition hover:border-accent hover:text-accent-strong dark:border-white/10 dark:text-zinc-300"
+                    key={suggestion}
+                    onClick={() => addTag(suggestion)}
+                    type="button"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
               </div>
-            ))
-          ) : (
-            <p className="rounded-lg border border-dashed border-white/10 px-4 py-5 text-center text-sm text-zinc-500">
-              Add tags such as Party, Focus, or Chill and rate the match.
-            </p>
-          )}
-        </div>
-        <datalist id="curatore-tag-suggestions">
-          {suggestions.map((suggestion) => (
-            <option key={suggestion} value={suggestion} />
-          ))}
-        </datalist>
-      </div>
-      ) : null}
-      <div className="mt-7 flex gap-3">
-        <button
-          className="h-11 flex-1 rounded-xl border border-white/10 text-sm font-semibold text-zinc-300"
-          onClick={onClose}
-          type="button"
-        >
-          Cancel
-        </button>
-        <button
-          className="h-11 flex-1 rounded-xl bg-white text-sm font-semibold text-zinc-950 transition hover:bg-[var(--accent)]"
-          onClick={() =>
-            onSave({
-              rating,
-              keywords: keywords
-                .filter((keyword) => keyword.name.trim())
-                .map((keyword) => ({
-                  name: keyword.name.trim(),
-                  rating: keyword.rating
-                }))
-            })
-          }
-          type="button"
-        >
-          {mode === "rating" ? "Save rating" : "Save tags"}
-        </button>
-      </div>
-    </Modal>
-  );
-}
-
-function FrequencyDialog({
-  initial,
-  onClose,
-  onSave,
-  title
-}: {
-  initial: number;
-  onClose: () => void;
-  onSave: (frequency: number) => void;
-  title: string;
-}) {
-  const [frequency, setFrequency] = useState(initial);
-
-  return (
-    <Modal onClose={onClose}>
-      <p className="text-accent text-xs font-semibold uppercase tracking-[0.18em]">
-        Play frequency
-      </p>
-      <h2 className="mt-2 truncate text-2xl font-bold text-white">{title}</h2>
-      <p className="mt-3 text-sm leading-6 text-zinc-400">
-        Choose exactly how many times this song appears in each playlist cycle.
-      </p>
-      <div className="mt-6 grid grid-cols-5 gap-2">
-        {[1, 2, 3, 4, 5].map((value) => (
+            </div>
+          ) : null}
           <button
-            aria-pressed={frequency === value}
-            className={`flex h-14 flex-col items-center justify-center rounded-xl border text-sm font-semibold transition ${
-              frequency === value
-                ? "border-[var(--accent)] bg-[var(--accent)] text-black"
-                : "border-white/10 text-zinc-400 hover:border-[var(--accent)] hover:text-white"
-            }`}
-            key={value}
-            onClick={() => setFrequency(value)}
+            className="h-9 w-full rounded-lg bg-zinc-950 text-xs font-semibold text-white transition hover:bg-[var(--accent)] hover:text-black dark:bg-white dark:text-zinc-950"
+            onClick={() => onSaveTags(keywords)}
             type="button"
           >
-            <span>{value}x</span>
-            {value === 1 ? (
-              <span className="text-[9px] font-medium uppercase tracking-wide">
-                Default
-              </span>
-            ) : null}
+            Done
           </button>
-        ))}
-      </div>
-      <div className="mt-7 flex gap-3">
-        <button
-          className="h-11 flex-1 rounded-xl border border-white/10 text-sm font-semibold text-zinc-300"
-          onClick={onClose}
-          type="button"
-        >
-          Cancel
-        </button>
-        <button
-          className="h-11 flex-1 rounded-xl bg-white text-sm font-semibold text-zinc-950 transition hover:bg-[var(--accent)]"
-          onClick={() => onSave(frequency)}
-          type="button"
-        >
-          Save frequency
-        </button>
-      </div>
-    </Modal>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
