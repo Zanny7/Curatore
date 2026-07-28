@@ -1371,9 +1371,9 @@ function TagColorPicker({
             <button
               aria-label={`${option.label} tag color`}
               aria-pressed={selected}
-              className={`relative flex h-7 w-7 items-center justify-center rounded-full transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-40 ${
+              className={`relative flex h-7 w-7 items-center justify-center rounded-full outline-none transition hover:scale-105 focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-40 ${
                 selected
-                  ? "ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--app-control-bg)]"
+                  ? "ring-2 ring-[var(--accent)]"
                   : "hover:ring-2 hover:ring-zinc-400/40"
               }`}
               key={option.color}
