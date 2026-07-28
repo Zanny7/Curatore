@@ -27,7 +27,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import {
+  type FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react";
 import { usePlayer } from "@/context/PlayerContext";
 import type {
   Playlist,
@@ -128,6 +134,47 @@ export default function PlaylistDetailPage() {
     const timeout = window.setTimeout(() => setUndoRemoval(null), 8000);
     return () => window.clearTimeout(timeout);
   }, [undoRemoval]);
+
+  useEffect(() => {
+    if (!inlineEditor && !openMenuId) {
+      return;
+    }
+
+    function dismissOpenSongControls(event: PointerEvent) {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+
+      if (inlineEditor) {
+        const editorRoot = event.target.closest("[data-song-editor-root]");
+        const activeEditor = `${inlineEditor.videoId}:${inlineEditor.kind}`;
+        if (editorRoot?.getAttribute("data-song-editor-root") !== activeEditor) {
+          setInlineEditor(null);
+        }
+      }
+
+      if (openMenuId) {
+        const menuRoot = event.target.closest("[data-song-menu-root]");
+        if (menuRoot?.getAttribute("data-song-menu-root") !== openMenuId) {
+          setOpenMenuId(null);
+        }
+      }
+    }
+
+    function dismissOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setInlineEditor(null);
+        setOpenMenuId(null);
+      }
+    }
+
+    document.addEventListener("pointerdown", dismissOpenSongControls);
+    document.addEventListener("keydown", dismissOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", dismissOpenSongControls);
+      document.removeEventListener("keydown", dismissOnEscape);
+    };
+  }, [inlineEditor, openMenuId]);
 
   if (!playlistsLoaded) {
     return <p className="text-sm text-zinc-500">Loading playlist…</p>;
@@ -601,6 +648,7 @@ export default function PlaylistDetailPage() {
                   <div className="relative mt-2 flex flex-wrap items-center gap-x-1 gap-y-1 2xl:hidden">
                     <CompactSongControl
                       ariaLabel={`Set play frequency for ${video.title}`}
+                      controlKey={`${video.id}:frequency`}
                       editor={editorKind === "frequency" ? editor : null}
                       icon={Repeat2}
                       label={
@@ -615,6 +663,7 @@ export default function PlaylistDetailPage() {
                     <CompactSongControl
                       active={Boolean(metadata.rating)}
                       ariaLabel={`Rate ${video.title}`}
+                      controlKey={`${video.id}:rating`}
                       editor={editorKind === "rating" ? editor : null}
                       icon={Star}
                       label={
@@ -625,6 +674,7 @@ export default function PlaylistDetailPage() {
                     <CompactSongControl
                       active={metadata.keywords.length > 0}
                       ariaLabel={`Edit tags for ${video.title}`}
+                      controlKey={`${video.id}:tags`}
                       editor={editorKind === "tags" ? editor : null}
                       icon={Tags}
                       label={
@@ -638,7 +688,10 @@ export default function PlaylistDetailPage() {
                   </div>
                 </div>
                 <div className="hidden 2xl:contents">
-                  <div className="relative grid w-full grid-cols-[2rem_minmax(0,1fr)] items-center gap-1">
+                  <div
+                    className="relative grid w-full grid-cols-[2rem_minmax(0,1fr)] items-center gap-1"
+                    data-song-editor-root={`${video.id}:frequency`}
+                  >
                     <button
                       aria-label={`Set play frequency for ${video.title}`}
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
@@ -656,7 +709,10 @@ export default function PlaylistDetailPage() {
                     )}
                     {editorKind === "frequency" ? editor : null}
                   </div>
-                  <div className="relative grid w-full grid-cols-[2rem_minmax(0,1fr)] items-center gap-1">
+                  <div
+                    className="relative grid w-full grid-cols-[2rem_minmax(0,1fr)] items-center gap-1"
+                    data-song-editor-root={`${video.id}:rating`}
+                  >
                     <button
                       aria-label={`Rate ${video.title}`}
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
@@ -679,7 +735,10 @@ export default function PlaylistDetailPage() {
                     ) : null}
                     {editorKind === "rating" ? editor : null}
                   </div>
-                  <div className="relative flex w-full items-center gap-1">
+                  <div
+                    className="relative flex w-full items-center gap-1"
+                    data-song-editor-root={`${video.id}:tags`}
+                  >
                     <button
                       aria-label={`Edit tags for ${video.title}`}
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
@@ -695,7 +754,10 @@ export default function PlaylistDetailPage() {
                     {editorKind === "tags" ? editor : null}
                   </div>
                 </div>
-                <div className="relative shrink-0">
+                <div
+                  className="relative shrink-0"
+                  data-song-menu-root={video.id}
+                >
                   <button
                     aria-label={`More actions for ${video.title}`}
                     className="flex h-8 w-8 items-center justify-center rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white"
@@ -944,9 +1006,41 @@ function TagSortControl({
   tags: string[];
 }) {
   const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function dismissTagMenu(event: PointerEvent) {
+      if (
+        event.target instanceof Node &&
+        !rootRef.current?.contains(event.target)
+      ) {
+        setOpen(false);
+      }
+    }
+
+    function dismissTagMenuOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", dismissTagMenu);
+    document.addEventListener("keydown", dismissTagMenuOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", dismissTagMenu);
+      document.removeEventListener("keydown", dismissTagMenuOnEscape);
+    };
+  }, [open]);
 
   return (
-    <div className={`relative flex min-w-0 items-center gap-1 ${className}`}>
+    <div
+      className={`relative flex min-w-0 items-center gap-1 ${className}`}
+      ref={rootRef}
+    >
       <SortButton
         active={active}
         direction={direction}
@@ -1048,6 +1142,7 @@ function TagSortControl({
 function CompactSongControl({
   active = false,
   ariaLabel,
+  controlKey,
   editor,
   icon: Icon,
   label,
@@ -1055,13 +1150,17 @@ function CompactSongControl({
 }: {
   active?: boolean;
   ariaLabel: string;
+  controlKey: string;
   editor?: React.ReactNode;
   icon: typeof Star;
   label: React.ReactNode;
   onClick: () => void;
 }) {
   return (
-    <div className="relative inline-flex min-w-0 shrink-0 items-center gap-0.5">
+    <div
+      className="relative inline-flex min-w-0 shrink-0 items-center gap-0.5"
+      data-song-editor-root={controlKey}
+    >
       <button
         aria-label={ariaLabel}
         className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md p-1 text-[10px] transition hover:bg-zinc-100 hover:text-accent-strong dark:hover:bg-white/5 ${
