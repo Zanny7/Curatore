@@ -47,6 +47,9 @@ type InlineEditorKind = "frequency" | "rating" | "tags";
 type SortKey = "song" | "frequency" | "rating" | "tags";
 type SortDirection = "asc" | "desc";
 
+const TAG_MAX_LENGTH = 16;
+const TAG_PILL_VISIBLE_LENGTH = 8;
+
 export default function PlaylistDetailPage() {
   const router = useRouter();
   const params = useParams<{ playlistId: string }>();
@@ -506,17 +509,19 @@ export default function PlaylistDetailPage() {
             />
             <SortingHelpLink />
           </div>
-          <div className="hidden grid-cols-[1.25rem_2rem_6rem_minmax(0,1fr)_6rem_6rem_10rem_2.5rem] items-center gap-3 border-b border-zinc-200 px-3 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:border-white/10 2xl:grid">
-            <span />
-            <span />
-            <span />
-            <SortButton
-              active={sort?.key === "song"}
-              className="justify-center"
-              direction={sort?.key === "song" ? sort.direction : undefined}
-              label="Song"
-              onClick={() => toggleSort("song")}
-            />
+          <div className="hidden grid-cols-[minmax(0,1fr)_5rem_5rem_13rem_2.5rem] items-center gap-x-2 border-b border-zinc-200 px-3 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:border-white/10 2xl:grid">
+            <div className="grid grid-cols-[1.25rem_2rem_6rem_minmax(0,1fr)] items-center gap-x-3">
+              <span />
+              <span />
+              <span />
+              <SortButton
+                active={sort?.key === "song"}
+                className="justify-center"
+                direction={sort?.key === "song" ? sort.direction : undefined}
+                label="Song"
+                onClick={() => toggleSort("song")}
+              />
+            </div>
             <SortButton
               active={sort?.key === "frequency"}
               className="pl-2"
@@ -578,7 +583,7 @@ export default function PlaylistDetailPage() {
             ) : null;
             return (
               <div
-                className={`relative flex items-center gap-3 border-b border-zinc-200 p-3 transition last:border-b-0 dark:border-white/10 2xl:grid 2xl:grid-cols-[1.25rem_2rem_6rem_minmax(0,1fr)_6rem_6rem_10rem_2.5rem] ${
+                className={`relative flex items-center gap-3 border-b border-zinc-200 p-3 transition last:border-b-0 dark:border-white/10 2xl:grid 2xl:grid-cols-[minmax(0,1fr)_5rem_5rem_13rem_2.5rem] 2xl:gap-x-2 ${
                   isSelected ? "bg-accent-subtle" : "hover:bg-zinc-50/80 dark:hover:bg-white/[0.025]"
                 }`}
                 draggable={!sort}
@@ -597,6 +602,7 @@ export default function PlaylistDetailPage() {
                   setDragIndex(null);
                 }}
               >
+                <div className="contents 2xl:grid 2xl:grid-cols-[1.25rem_2rem_6rem_minmax(0,1fr)] 2xl:items-center 2xl:gap-x-3">
                 <span
                   aria-label={`Drag to reorder ${video.title}`}
                   className={`hidden h-10 w-5 shrink-0 items-center justify-center text-zinc-400 sm:flex ${
@@ -651,11 +657,8 @@ export default function PlaylistDetailPage() {
                       controlKey={`${video.id}:frequency`}
                       editor={editorKind === "frequency" ? editor : null}
                       icon={Repeat2}
-                      label={
-                        (video.playFrequency ?? 1) === 1
-                          ? null
-                          : `${video.playFrequency}x`
-                      }
+                      label={`${video.playFrequency ?? 1}x`}
+                      labelInside
                       onClick={() =>
                         toggleInlineEditor(video.id, "frequency")
                       }
@@ -666,9 +669,8 @@ export default function PlaylistDetailPage() {
                       controlKey={`${video.id}:rating`}
                       editor={editorKind === "rating" ? editor : null}
                       icon={Star}
-                      label={
-                        metadata.rating ? `${metadata.rating}/5` : null
-                      }
+                      label={metadata.rating ? `${metadata.rating}/5` : null}
+                      labelInside
                       onClick={() => toggleInlineEditor(video.id, "rating")}
                     />
                     <CompactSongControl
@@ -687,35 +689,34 @@ export default function PlaylistDetailPage() {
                     />
                   </div>
                 </div>
+                </div>
                 <div className="hidden 2xl:contents">
                   <div
-                    className="relative grid w-full grid-cols-[2rem_minmax(0,1fr)] items-center gap-1"
+                    className="relative flex w-full items-center"
                     data-song-editor-root={`${video.id}:frequency`}
                   >
                     <button
                       aria-label={`Set play frequency for ${video.title}`}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
+                      className="inline-flex h-8 min-w-[4.25rem] items-center gap-1.5 rounded-lg px-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
                       onClick={() =>
                         toggleInlineEditor(video.id, "frequency")
                       }
                       type="button"
                     >
                       <Repeat2 aria-hidden="true" className="h-4 w-4" />
-                    </button>
-                    {(video.playFrequency ?? 1) === 1 ? null : (
-                      <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                        {video.playFrequency}x
+                      <span className="text-sm font-medium">
+                        {video.playFrequency ?? 1}x
                       </span>
-                    )}
+                    </button>
                     {editorKind === "frequency" ? editor : null}
                   </div>
                   <div
-                    className="relative grid w-full grid-cols-[2rem_minmax(0,1fr)] items-center gap-1"
+                    className="relative flex w-full items-center"
                     data-song-editor-root={`${video.id}:rating`}
                   >
                     <button
                       aria-label={`Rate ${video.title}`}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
+                      className="inline-flex h-8 min-w-[4.25rem] items-center gap-1.5 rounded-lg px-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
                       onClick={() => toggleInlineEditor(video.id, "rating")}
                       type="button"
                     >
@@ -727,12 +728,12 @@ export default function PlaylistDetailPage() {
                             : ""
                         }`}
                       />
+                      {metadata.rating ? (
+                        <span className="text-sm font-medium">
+                          {metadata.rating}/5
+                        </span>
+                      ) : null}
                     </button>
-                    {metadata.rating ? (
-                      <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                        {metadata.rating}/5
-                      </span>
-                    ) : null}
                     {editorKind === "rating" ? editor : null}
                   </div>
                   <div
@@ -755,7 +756,7 @@ export default function PlaylistDetailPage() {
                   </div>
                 </div>
                 <div
-                  className="relative shrink-0"
+                  className="relative shrink-0 2xl:justify-self-center"
                   data-song-menu-root={video.id}
                 >
                   <button
@@ -1061,7 +1062,7 @@ function TagSortControl({
             ? `Choose tag to sort by, currently ${selectedTag}`
             : "Choose tag to sort by"
         }
-        className={`flex h-6 min-w-6 max-w-20 items-center justify-center gap-0.5 rounded-md border px-1 text-[10px] normal-case tracking-normal transition ${
+        className={`flex h-6 w-36 items-center justify-center gap-1 rounded-md border px-2 text-[10px] normal-case tracking-normal transition ${
           selectedTag
             ? "border-zinc-300 bg-zinc-50 text-zinc-400 dark:border-white/10 dark:bg-white/5"
             : "border-zinc-200 text-zinc-400 hover:border-zinc-400 hover:bg-zinc-50 dark:border-white/10 dark:hover:border-white/25 dark:hover:bg-white/5"
@@ -1071,7 +1072,9 @@ function TagSortControl({
         type="button"
       >
         {selectedTag ? (
-          <span className="truncate">{selectedTag}</span>
+          <span className="min-w-0 flex-1 truncate text-center">
+            {selectedTag}
+          </span>
         ) : (
           <span>-</span>
         )}
@@ -1146,6 +1149,7 @@ function CompactSongControl({
   editor,
   icon: Icon,
   label,
+  labelInside = false,
   onClick
 }: {
   active?: boolean;
@@ -1154,6 +1158,7 @@ function CompactSongControl({
   editor?: React.ReactNode;
   icon: typeof Star;
   label: React.ReactNode;
+  labelInside?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -1163,7 +1168,9 @@ function CompactSongControl({
     >
       <button
         aria-label={ariaLabel}
-        className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md p-1 text-[10px] transition hover:bg-zinc-100 hover:text-accent-strong dark:hover:bg-white/5 ${
+        className={`inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-md px-1.5 text-[10px] font-medium transition hover:bg-zinc-100 hover:text-accent-strong dark:hover:bg-white/5 ${
+          labelInside ? "min-w-7" : "w-7"
+        } ${
           active
             ? "text-accent-strong"
             : "text-zinc-500 dark:text-zinc-400"
@@ -1172,10 +1179,13 @@ function CompactSongControl({
         type="button"
       >
         <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+        {labelInside ? label : null}
       </button>
-      <span className="min-w-0 text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
-        {label}
-      </span>
+      {!labelInside ? (
+        <span className="min-w-0 text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
+          {label}
+        </span>
+      ) : null}
       {editor}
     </div>
   );
@@ -1217,7 +1227,7 @@ function TagPills({
             key={keyword.name}
             tabIndex={0}
           >
-            <span className="truncate">{keyword.name.slice(0, 12)}</span>
+            <span className="truncate">{formatTagPill(keyword.name)}</span>
             <span className="theme-tooltip pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden h-6 -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-md px-2 text-[9px] leading-none shadow-lg group-hover/tag:flex group-focus/tag:flex">
               {keyword.rating}/10
             </span>
@@ -1226,6 +1236,12 @@ function TagPills({
       })}
     </span>
   );
+}
+
+function formatTagPill(name: string) {
+  return name.length > TAG_PILL_VISIBLE_LENGTH
+    ? `${name.slice(0, TAG_PILL_VISIBLE_LENGTH)}…`
+    : name;
 }
 
 function BulkToolbar({
@@ -1463,7 +1479,7 @@ function SongInlineEditor({
   );
 
   function addTag(name: string) {
-    const trimmed = name.trim().slice(0, 12);
+    const trimmed = name.trim().slice(0, TAG_MAX_LENGTH);
     if (!trimmed) {
       return;
     }
@@ -1490,9 +1506,7 @@ function SongInlineEditor({
       className={`theme-menu absolute z-50 overflow-hidden rounded-xl text-left backdrop-blur-xl ${
         kind === "tags"
           ? "right-0 top-[calc(100%+0.35rem)] w-[min(18rem,calc(100vw-2rem))] p-3"
-          : kind === "frequency"
-            ? "left-8 top-0 w-10 p-1"
-            : "left-8 top-0 w-8 p-1"
+          : "left-0 top-[calc(100%+0.35rem)] w-[4.25rem] p-1"
       }`}
       draggable={false}
       onClick={(event) => event.stopPropagation()}
@@ -1563,7 +1577,7 @@ function SongInlineEditor({
                   className="group/tag relative inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-semibold text-accent-strong"
                   key={keyword.name}
                 >
-                  {keyword.name}
+                  {formatTagPill(keyword.name)}
                   <button
                     aria-label={`Remove ${keyword.name}`}
                     className="rounded-full hover:text-red-400"
@@ -1597,8 +1611,10 @@ function SongInlineEditor({
               aria-label="Tag name"
               className="theme-field h-9 min-w-0 rounded-lg px-2.5 text-xs"
               disabled={atTagLimit}
-              maxLength={12}
-              onChange={(event) => setTagName(event.target.value.slice(0, 12))}
+              maxLength={TAG_MAX_LENGTH}
+              onChange={(event) =>
+                setTagName(event.target.value.slice(0, TAG_MAX_LENGTH))
+              }
               placeholder={atTagLimit ? "3 tag limit reached" : 'e.g. "Pop"'}
               value={tagName}
             />
@@ -1831,8 +1847,10 @@ function BulkMetadataDialog({
           <input
             className="theme-field h-10 rounded-lg px-3 text-sm"
             list="curatore-bulk-tag-suggestions"
-            maxLength={12}
-            onChange={(event) => setTagName(event.target.value.slice(0, 12))}
+            maxLength={TAG_MAX_LENGTH}
+            onChange={(event) =>
+              setTagName(event.target.value.slice(0, TAG_MAX_LENGTH))
+            }
             placeholder={'Enter a tag, e.g. "Pop"'}
             value={tagName}
           />
@@ -1873,7 +1891,10 @@ function BulkMetadataDialog({
               frequency: frequency ? Number(frequency) : undefined,
               rating: rating ? Number(rating) : undefined,
               tag: tagName.trim()
-                ? { name: tagName.trim().slice(0, 12), rating: tagRating }
+                ? {
+                    name: tagName.trim().slice(0, TAG_MAX_LENGTH),
+                    rating: tagRating
+                  }
                 : undefined
             })
           }
