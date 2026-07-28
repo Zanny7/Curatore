@@ -41,10 +41,18 @@ export type TagColor =
   | "rose"
   | "violet";
 
+export type TagDefinition = {
+  id: string;
+  name: string;
+  color: TagColor;
+  createdAt?: string;
+};
+
 export type KeywordRating = {
   color?: TagColor;
   name: string;
   rating: number;
+  tagId?: string;
 };
 
 export type SongMetadata = {

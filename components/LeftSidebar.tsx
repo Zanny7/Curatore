@@ -12,6 +12,7 @@ import {
   ListMusic,
   PlayCircle,
   Settings,
+  Tags,
   X
 } from "lucide-react";
 import { UserSection } from "@/components/UserSection";
@@ -19,6 +20,7 @@ import { UserSection } from "@/components/UserSection";
 const navItems = [
   { href: "/player", label: "Player", icon: PlayCircle },
   { href: "/playlists", label: "Playlists", icon: ListMusic },
+  { href: "/tags", label: "Tags", icon: Tags },
   { href: "/settings", label: "Settings", icon: Settings }
 ];
 

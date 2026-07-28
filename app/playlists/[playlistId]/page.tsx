@@ -35,11 +35,16 @@ import {
   useState
 } from "react";
 import { usePlayer } from "@/context/PlayerContext";
+import {
+  formatTagPill,
+  getTagPillClasses,
+  TAG_PILL_VISIBLE_LENGTH
+} from "@/lib/tags";
 import type {
   Playlist,
   RemovedPlaylistVideo,
   SongMetadata,
-  TagColor,
+  TagDefinition,
   VideoItem
 } from "@/types";
 
@@ -47,51 +52,6 @@ type TransferMode = "copy" | "move";
 type InlineEditorKind = "frequency" | "rating" | "tags";
 type SortKey = "song" | "frequency" | "rating" | "tags";
 type SortDirection = "asc" | "desc";
-
-const TAG_MAX_LENGTH = 12;
-const TAG_PILL_VISIBLE_LENGTH = 6;
-const TAG_COLOR_OPTIONS: {
-  color: TagColor;
-  label: string;
-  swatchClassName: string;
-}[] = [
-  {
-    color: "theme",
-    label: "Theme",
-    swatchClassName:
-      "bg-[linear-gradient(135deg,#71717a_0_48%,var(--accent)_52%_100%)]"
-  },
-  {
-    color: "slate",
-    label: "Slate",
-    swatchClassName: "bg-slate-500"
-  },
-  {
-    color: "blue",
-    label: "Blue",
-    swatchClassName: "bg-blue-500"
-  },
-  {
-    color: "emerald",
-    label: "Emerald",
-    swatchClassName: "bg-emerald-500"
-  },
-  {
-    color: "amber",
-    label: "Amber",
-    swatchClassName: "bg-amber-500"
-  },
-  {
-    color: "rose",
-    label: "Rose",
-    swatchClassName: "bg-rose-500"
-  },
-  {
-    color: "violet",
-    label: "Violet",
-    swatchClassName: "bg-violet-500"
-  }
-];
 
 export default function PlaylistDetailPage() {
   const router = useRouter();
@@ -112,6 +72,7 @@ export default function PlaylistDetailPage() {
     restorePlaylistVideos,
     setPlaylistVideoFrequency,
     songMetadata,
+    tagDefinitions,
     updatePlaylistVideo,
     updateSongMetadata
   } = usePlayer();
@@ -146,17 +107,6 @@ export default function PlaylistDetailPage() {
     playlistId: string;
     removed: RemovedPlaylistVideo[];
   } | null>(null);
-  const tagSuggestions = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          Object.values(songMetadata).flatMap((metadata) =>
-            metadata.keywords.map((keyword) => keyword.name)
-          )
-        )
-      ).sort((a, b) => a.localeCompare(b)),
-    [songMetadata]
-  );
   const playlistTags = useMemo(
     () =>
       Array.from(
@@ -621,7 +571,7 @@ export default function PlaylistDetailPage() {
                   updateSongMetadata(video.id, { ...metadata, keywords });
                   setInlineEditor(null);
                 }}
-                suggestions={tagSuggestions}
+                tagDefinitions={tagDefinitions}
               />
             ) : null;
             return (
@@ -858,16 +808,18 @@ export default function PlaylistDetailPage() {
           onSave={({ frequency, rating, tag }) => {
             for (const videoId of selected) {
               const current = songMetadata[videoId] ?? { keywords: [] };
-              const keywords = tag?.name
-                ? [
-                    ...current.keywords.filter(
-                      (keyword) =>
-                        keyword.name.toLocaleLowerCase() !==
+              const withoutTag = tag
+                ? current.keywords.filter(
+                    (keyword) =>
+                      keyword.tagId !== tag.tagId &&
+                      keyword.name.toLocaleLowerCase() !==
                         tag.name.toLocaleLowerCase()
-                    ),
-                    tag
-                  ]
+                  )
                 : current.keywords;
+              const keywords =
+                tag && withoutTag.length < 3
+                  ? [...withoutTag, tag]
+                  : current.keywords;
               updateSongMetadata(videoId, {
                 rating: rating ?? current.rating,
                 keywords
@@ -880,7 +832,7 @@ export default function PlaylistDetailPage() {
             setSelectedIds(new Set());
             setNotice(`${selected.length} songs updated.`);
           }}
-          suggestions={tagSuggestions}
+          tagDefinitions={tagDefinitions}
         />
       ) : null}
 
@@ -1284,41 +1236,6 @@ function TagPills({
   );
 }
 
-function formatTagPill(name: string) {
-  return name.length > TAG_PILL_VISIBLE_LENGTH
-    ? `${name.slice(0, TAG_PILL_VISIBLE_LENGTH)}..`
-    : name;
-}
-
-function getTagPillClasses(color: TagColor, active: boolean) {
-  if (color === "theme") {
-    return active
-      ? "bg-accent-soft text-accent-strong ring-1 ring-inset ring-[var(--accent-ring)]"
-      : "bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/[0.06] dark:text-zinc-400 dark:ring-white/10";
-  }
-
-  const colorClasses: Record<Exclude<TagColor, "theme">, string> = {
-    slate:
-      "bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200 dark:bg-slate-500/15 dark:text-slate-300 dark:ring-slate-400/20",
-    blue:
-      "bg-blue-100 text-blue-700 ring-1 ring-inset ring-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-400/20",
-    emerald:
-      "bg-emerald-100 text-emerald-700 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-400/20",
-    amber:
-      "bg-amber-100 text-amber-700 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-400/20",
-    rose:
-      "bg-rose-100 text-rose-700 ring-1 ring-inset ring-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:ring-rose-400/20",
-    violet:
-      "bg-violet-100 text-violet-700 ring-1 ring-inset ring-violet-200 dark:bg-violet-500/15 dark:text-violet-300 dark:ring-violet-400/20"
-  };
-
-  return `${colorClasses[color]} ${
-    active
-      ? "outline outline-2 outline-offset-1 outline-[var(--accent)]"
-      : ""
-  }`;
-}
-
 function ExpandableTagName({
   expandedClassName,
   name
@@ -1339,63 +1256,6 @@ function ExpandableTagName({
         </span>
       ) : null}
     </>
-  );
-}
-
-function TagColorPicker({
-  disabled = false,
-  onChange,
-  value
-}: {
-  disabled?: boolean;
-  onChange: (color: TagColor) => void;
-  value: TagColor;
-}) {
-  const selectedLabel =
-    TAG_COLOR_OPTIONS.find((option) => option.color === value)?.label ??
-    "Theme";
-
-  return (
-    <fieldset className="space-y-2" disabled={disabled}>
-      <legend className="sr-only">Tag color</legend>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
-        Color
-        <span className="ml-1.5 normal-case tracking-normal text-zinc-500 dark:text-zinc-300">
-          {selectedLabel}
-        </span>
-      </p>
-      <div className="flex items-center gap-1.5">
-        {TAG_COLOR_OPTIONS.map((option) => {
-          const selected = option.color === value;
-          return (
-            <button
-              aria-label={`${option.label} tag color`}
-              aria-pressed={selected}
-              className={`relative flex h-7 w-7 items-center justify-center rounded-full outline-none transition hover:scale-105 focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-40 ${
-                selected
-                  ? "ring-2 ring-[var(--accent)]"
-                  : "hover:ring-2 hover:ring-zinc-400/40"
-              }`}
-              key={option.color}
-              onClick={() => onChange(option.color)}
-              title={option.label}
-              type="button"
-            >
-              <span
-                aria-hidden="true"
-                className={`h-5 w-5 rounded-full ${option.swatchClassName}`}
-              />
-              {selected ? (
-                <Check
-                  aria-hidden="true"
-                  className="absolute h-3 w-3 text-white drop-shadow"
-                />
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
-    </fieldset>
   );
 }
 
@@ -1610,7 +1470,7 @@ function SongInlineEditor({
   onSaveFrequency,
   onSaveRating,
   onSaveTags,
-  suggestions
+  tagDefinitions
 }: {
   frequency: number;
   kind: InlineEditorKind;
@@ -1619,46 +1479,179 @@ function SongInlineEditor({
   onSaveFrequency: (frequency: number) => void;
   onSaveRating: (rating: number) => void;
   onSaveTags: (keywords: SongMetadata["keywords"]) => void;
-  suggestions: string[];
+  tagDefinitions: TagDefinition[];
 }) {
   const [keywords, setKeywords] = useState(metadata.keywords);
-  const [tagName, setTagName] = useState("");
-  const [tagRating, setTagRating] = useState(5);
-  const [tagColor, setTagColor] = useState<TagColor>("theme");
+  const [tagSearch, setTagSearch] = useState("");
   const atTagLimit = keywords.length >= 3;
-  const unusedSuggestions = suggestions.filter(
-    (suggestion) =>
-      !keywords.some(
-        (keyword) =>
-          keyword.name.toLocaleLowerCase() === suggestion.toLocaleLowerCase()
-      )
-  );
+  const visibleTags = [...tagDefinitions]
+    .filter((tag) =>
+      tag.name.toLocaleLowerCase().includes(tagSearch.toLocaleLowerCase())
+    )
+    .sort((left, right) =>
+      left.name.localeCompare(right.name, undefined, { sensitivity: "base" })
+    );
 
-  function addTag(name: string) {
-    const trimmed = name.trim().slice(0, TAG_MAX_LENGTH);
-    if (!trimmed) {
-      return;
-    }
+  function findAssignment(tag: TagDefinition) {
+    return keywords.find(
+      (keyword) =>
+        keyword.tagId === tag.id ||
+        (!keyword.tagId &&
+          keyword.name.toLocaleLowerCase() === tag.name.toLocaleLowerCase())
+    );
+  }
+
+  function toggleTag(tag: TagDefinition) {
     setKeywords((current) => {
-      const withoutMatch = current.filter(
+      const assigned = current.some(
         (keyword) =>
-          keyword.name.toLocaleLowerCase() !== trimmed.toLocaleLowerCase()
+          keyword.tagId === tag.id ||
+          (!keyword.tagId &&
+            keyword.name.toLocaleLowerCase() === tag.name.toLocaleLowerCase())
       );
-      if (withoutMatch.length === current.length && current.length >= 3) {
+      if (assigned) {
+        return current.filter(
+          (keyword) =>
+            keyword.tagId !== tag.id &&
+            !(
+              !keyword.tagId &&
+              keyword.name.toLocaleLowerCase() === tag.name.toLocaleLowerCase()
+            )
+        );
+      }
+      if (current.length >= 3) {
         return current;
       }
       return [
-        ...withoutMatch,
-        { color: tagColor, name: trimmed, rating: tagRating }
-      ].slice(0, 3);
+        ...current,
+        {
+          tagId: tag.id,
+          name: tag.name,
+          color: tag.color,
+          rating: 5
+        }
+      ];
     });
-    setTagName("");
   }
 
-  function submitTag(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    addTag(tagName);
+  function updateTagRating(tag: TagDefinition, rating: number) {
+    setKeywords((current) =>
+      current.map((keyword) =>
+        keyword.tagId === tag.id ||
+        (!keyword.tagId &&
+          keyword.name.toLocaleLowerCase() === tag.name.toLocaleLowerCase())
+          ? {
+              ...keyword,
+              tagId: tag.id,
+              name: tag.name,
+              color: tag.color,
+              rating
+            }
+          : keyword
+      )
+    );
   }
+
+  const tagEditor = (
+    <div className="mt-3 space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
+          Created tags
+        </p>
+        <span className="text-[10px] text-zinc-500">
+          {keywords.length}/3 assigned
+        </span>
+      </div>
+
+      {tagDefinitions.length > 0 ? (
+        <>
+          <input
+            aria-label="Search created tags"
+            className="theme-field h-9 w-full rounded-lg px-2.5 text-xs"
+            onChange={(event) => setTagSearch(event.target.value)}
+            placeholder="Search tags"
+            value={tagSearch}
+          />
+          <div className="max-h-56 space-y-1.5 overflow-y-auto pr-1">
+            {visibleTags.length > 0 ? (
+              visibleTags.map((tag) => {
+                const assignment = findAssignment(tag);
+                const selected = Boolean(assignment);
+                return (
+                  <div
+                    className="flex min-h-9 items-center gap-2 rounded-lg px-1 py-0.5"
+                    key={tag.id}
+                  >
+                    <button
+                      aria-pressed={selected}
+                      className={`inline-flex min-w-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-35 ${getTagPillClasses(
+                        tag.color,
+                        selected
+                      )}`}
+                      disabled={!selected && atTagLimit}
+                      onClick={() => toggleTag(tag)}
+                      type="button"
+                    >
+                      {selected ? (
+                        <Check
+                          aria-hidden="true"
+                          className="h-3 w-3 shrink-0"
+                        />
+                      ) : null}
+                      <span className="truncate">{tag.name}</span>
+                    </button>
+                    {assignment ? (
+                      <select
+                        aria-label={`${tag.name} match rating`}
+                        className="theme-field ml-auto h-8 w-[4.5rem] rounded-lg px-1 text-xs"
+                        onChange={(event) =>
+                          updateTagRating(tag, Number(event.target.value))
+                        }
+                        value={assignment.rating}
+                      >
+                        {Array.from(
+                          { length: 10 },
+                          (_, index) => index + 1
+                        ).map((value) => (
+                          <option key={value} value={value}>
+                            {value}/10
+                          </option>
+                        ))}
+                      </select>
+                    ) : null}
+                  </div>
+                );
+              })
+            ) : (
+              <p className="py-5 text-center text-xs text-zinc-500">
+                No tags match your search.
+              </p>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="rounded-lg border border-dashed border-[var(--app-sidebar-border)] p-4 text-center">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            No tags have been created yet.
+          </p>
+          <Link
+            className="mt-2 inline-flex text-xs font-semibold text-accent-strong hover:underline"
+            href="/tags"
+          >
+            Open Tags
+          </Link>
+        </div>
+      )}
+
+      <button
+        className="h-9 w-full rounded-lg border border-[var(--accent)] bg-accent-soft text-xs font-semibold text-accent-strong transition hover:bg-[var(--accent)] hover:text-black"
+        onClick={() => onSaveTags(keywords)}
+        type="button"
+      >
+        Done
+      </button>
+    </div>
+  );
 
   return (
     <div
@@ -1672,19 +1665,19 @@ function SongInlineEditor({
       onDragStart={(event) => event.preventDefault()}
     >
       {kind === "tags" ? (
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-semibold text-zinc-950 dark:text-white">
-          Add Tags
-        </p>
-        <button
-          aria-label="Close editor"
-          className="flex h-7 w-7 items-center justify-center rounded-full text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-950 dark:hover:bg-white/5 dark:hover:text-white"
-          onClick={onClose}
-          type="button"
-        >
-          <X aria-hidden="true" className="h-4 w-4" />
-        </button>
-      </div>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-zinc-950 dark:text-white">
+            Assign Tags
+          </p>
+          <button
+            aria-label="Close editor"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-950 dark:hover:bg-white/5 dark:hover:text-white"
+            onClick={onClose}
+            type="button"
+          >
+            <X aria-hidden="true" className="h-4 w-4" />
+          </button>
+        </div>
       ) : null}
 
       {kind === "frequency" ? (
@@ -1727,124 +1720,7 @@ function SongInlineEditor({
         </div>
       ) : null}
 
-      {kind === "tags" ? (
-        <div className="mt-3 space-y-3">
-          <div className="flex min-h-6 items-start justify-between gap-2">
-            <div className="flex min-w-0 flex-wrap gap-1.5">
-              {keywords.map((keyword) => {
-                const pillColors = getTagPillClasses(
-                  keyword.color ?? "theme",
-                  false
-                );
-                return (
-                  <span
-                    className={`group/tag relative inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${pillColors}`}
-                    key={keyword.name}
-                  >
-                    <ExpandableTagName
-                      expandedClassName={pillColors}
-                      name={keyword.name}
-                    />
-                    <button
-                      aria-label={`Remove ${keyword.name}`}
-                      className="rounded-full hover:text-red-400"
-                      onClick={() =>
-                        setKeywords((current) =>
-                          current.filter(
-                            (item) => item.name !== keyword.name
-                          )
-                        )
-                      }
-                      type="button"
-                    >
-                      <X aria-hidden="true" className="h-3 w-3" />
-                    </button>
-                    <span className="theme-tooltip pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden h-6 -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-md px-2 text-[9px] leading-none shadow-lg group-hover/tag:flex group-focus-within/tag:flex">
-                      {keyword.rating}/10
-                    </span>
-                  </span>
-                );
-              })}
-            </div>
-            <span className="shrink-0 pt-1 text-[10px] text-zinc-500">
-              {keywords.length}/3 tags
-            </span>
-          </div>
-
-          <form
-            className="grid grid-cols-[minmax(0,1fr)_4.5rem_2rem] gap-1.5"
-            onSubmit={submitTag}
-          >
-            <input
-              aria-label="Tag name"
-              className="theme-field h-9 min-w-0 rounded-lg px-2.5 text-xs"
-              disabled={atTagLimit}
-              maxLength={TAG_MAX_LENGTH}
-              onChange={(event) =>
-                setTagName(event.target.value.slice(0, TAG_MAX_LENGTH))
-              }
-              placeholder={atTagLimit ? "3 tag limit reached" : 'e.g. "Pop"'}
-              value={tagName}
-            />
-            <select
-              aria-label="Tag match"
-              className="theme-field h-9 rounded-lg px-1 text-xs"
-              disabled={atTagLimit}
-              onChange={(event) => setTagRating(Number(event.target.value))}
-              value={tagRating}
-            >
-              {Array.from({ length: 10 }, (_, index) => index + 1).map(
-                (value) => (
-                  <option key={value} value={value}>
-                    {value}/10
-                  </option>
-                )
-              )}
-            </select>
-            <button
-              aria-label="Add tag"
-              className="flex h-9 items-center justify-center rounded-lg border border-[var(--app-sidebar-border)] text-zinc-400 transition hover:border-accent hover:text-accent-strong"
-              disabled={atTagLimit}
-              type="submit"
-            >
-              <Plus aria-hidden="true" className="h-4 w-4" />
-            </button>
-          </form>
-
-          <TagColorPicker
-            disabled={atTagLimit}
-            onChange={setTagColor}
-            value={tagColor}
-          />
-
-          {!atTagLimit && unusedSuggestions.length > 0 ? (
-            <div>
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
-                Previously used
-              </p>
-              <div className="flex max-h-20 flex-wrap gap-1.5 overflow-y-auto">
-                {unusedSuggestions.map((suggestion) => (
-                  <button
-                    className="rounded-full border border-[var(--app-sidebar-border)] bg-white/5 px-2.5 py-1 text-[11px] text-zinc-300 transition hover:border-accent hover:text-accent-strong"
-                    key={suggestion}
-                    onClick={() => addTag(suggestion)}
-                    type="button"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-          <button
-            className="h-9 w-full rounded-lg border border-[var(--accent)] bg-accent-soft text-xs font-semibold text-accent-strong transition hover:bg-[var(--accent)] hover:text-black"
-            onClick={() => onSaveTags(keywords)}
-            type="button"
-          >
-            Done
-          </button>
-        </div>
-      ) : null}
+      {kind === "tags" ? tagEditor : null}
     </div>
   );
 }
@@ -1963,7 +1839,7 @@ function BulkMetadataDialog({
   count,
   onClose,
   onSave,
-  suggestions
+  tagDefinitions
 }: {
   count: number;
   onClose: () => void;
@@ -1972,14 +1848,14 @@ function BulkMetadataDialog({
     rating?: number;
     tag?: SongMetadata["keywords"][number];
   }) => void;
-  suggestions: string[];
+  tagDefinitions: TagDefinition[];
 }) {
   const [rating, setRating] = useState("");
   const [frequency, setFrequency] = useState("");
-  const [tagName, setTagName] = useState("");
+  const [tagId, setTagId] = useState("");
   const [tagRating, setTagRating] = useState(5);
-  const [tagColor, setTagColor] = useState<TagColor>("theme");
-  const hasChanges = Boolean(rating || frequency || tagName.trim());
+  const selectedTag = tagDefinitions.find((tag) => tag.id === tagId);
+  const hasChanges = Boolean(rating || frequency || selectedTag);
 
   return (
     <Modal onClose={onClose}>
@@ -2018,40 +1894,56 @@ function BulkMetadataDialog({
         <p className="text-sm font-semibold text-zinc-200">
           Add the same tag
         </p>
-        <div className="mt-3 grid grid-cols-[minmax(0,1fr)_6rem] gap-2">
-          <input
-            className="theme-field h-10 rounded-lg px-3 text-sm"
-            list="curatore-bulk-tag-suggestions"
-            maxLength={TAG_MAX_LENGTH}
-            onChange={(event) =>
-              setTagName(event.target.value.slice(0, TAG_MAX_LENGTH))
-            }
-            placeholder={'Enter a tag, e.g. "Pop"'}
-            value={tagName}
-          />
-          <select
-            aria-label="Tag match"
-            className="theme-field h-10 rounded-lg px-2 text-sm"
-            onChange={(event) => setTagRating(Number(event.target.value))}
-            value={tagRating}
-          >
-            {Array.from({ length: 10 }, (_, index) => index + 1).map(
-              (value) => (
-                <option key={value} value={value}>
-                  {value}/10
-                </option>
-              )
-            )}
-          </select>
-        </div>
-        <datalist id="curatore-bulk-tag-suggestions">
-          {suggestions.map((suggestion) => (
-            <option key={suggestion} value={suggestion} />
-          ))}
-        </datalist>
-        <div className="mt-3">
-          <TagColorPicker onChange={setTagColor} value={tagColor} />
-        </div>
+        {tagDefinitions.length > 0 ? (
+          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_6rem] gap-2">
+            <select
+              aria-label="Created tag"
+              className="theme-field h-10 rounded-lg px-2 text-sm"
+              onChange={(event) => setTagId(event.target.value)}
+              value={tagId}
+            >
+              <option value="">Leave unchanged</option>
+              {[...tagDefinitions]
+                .sort((left, right) =>
+                  left.name.localeCompare(right.name, undefined, {
+                    sensitivity: "base"
+                  })
+                )
+                .map((tag) => (
+                  <option key={tag.id} value={tag.id}>
+                    {tag.name}
+                  </option>
+                ))}
+            </select>
+            <select
+              aria-label="Tag match"
+              className="theme-field h-10 rounded-lg px-2 text-sm"
+              disabled={!selectedTag}
+              onChange={(event) => setTagRating(Number(event.target.value))}
+              value={tagRating}
+            >
+              {Array.from({ length: 10 }, (_, index) => index + 1).map(
+                (value) => (
+                  <option key={value} value={value}>
+                    {value}/10
+                  </option>
+                )
+              )}
+            </select>
+          </div>
+        ) : (
+          <div className="mt-3 rounded-lg border border-dashed border-[var(--app-sidebar-border)] p-3 text-center">
+            <p className="text-xs text-zinc-400">
+              Create a tag before assigning it to songs.
+            </p>
+            <Link
+              className="mt-2 inline-flex text-xs font-semibold text-accent-strong hover:underline"
+              href="/tags"
+            >
+              Open Tags
+            </Link>
+          </div>
+        )}
       </div>
       <div className="mt-7 flex gap-3">
         <button
@@ -2068,10 +1960,11 @@ function BulkMetadataDialog({
             onSave({
               frequency: frequency ? Number(frequency) : undefined,
               rating: rating ? Number(rating) : undefined,
-              tag: tagName.trim()
+              tag: selectedTag
                 ? {
-                    color: tagColor,
-                    name: tagName.trim().slice(0, TAG_MAX_LENGTH),
+                    tagId: selectedTag.id,
+                    color: selectedTag.color,
+                    name: selectedTag.name,
                     rating: tagRating
                   }
                 : undefined

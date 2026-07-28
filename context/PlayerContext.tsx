@@ -13,15 +13,24 @@ import {
   readStoredCuratedPlaylists,
   readStoredPlaylists,
   readStoredSongMetadata,
+  readStoredTagDefinitions,
   writeStoredCuratedPlaylists,
   writeStoredPlaylists,
-  writeStoredSongMetadata
+  writeStoredSongMetadata,
+  writeStoredTagDefinitions
 } from "@/lib/storage";
+import {
+  createTagId,
+  migrateTagLibrary,
+  normalizeTagName
+} from "@/lib/tags";
 import type {
   PlayerState,
   Playlist,
   RemovedPlaylistVideo,
   SongMetadata,
+  TagColor,
+  TagDefinition,
   VideoItem
 } from "@/types";
 
@@ -30,6 +39,7 @@ type PlayerContextValue = PlayerState & {
   curatedPlaylists: Playlist[];
   allPlaylists: Playlist[];
   songMetadata: Record<string, SongMetadata>;
+  tagDefinitions: TagDefinition[];
   currentVideo: PlayerState["queue"][number] | null;
   playerReady: boolean;
   playlistsLoaded: boolean;
@@ -69,6 +79,15 @@ type PlayerContextValue = PlayerState & {
     frequency: number
   ) => void;
   updateSongMetadata: (videoId: string, metadata: SongMetadata) => void;
+  createTagDefinition: (
+    name: string,
+    color: TagColor
+  ) => TagDefinition | null;
+  updateTagDefinition: (
+    tagId: string,
+    updates: { name: string; color: TagColor }
+  ) => boolean;
+  deleteTagDefinition: (tagId: string) => void;
   updatePlaylistVideo: (
     playlistId: string,
     videoId: string,
@@ -92,6 +111,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [songMetadata, setSongMetadata] = useState<
     Record<string, SongMetadata>
   >({});
+  const [tagDefinitions, setTagDefinitions] = useState<TagDefinition[]>([]);
   const [playlistsLoaded, setPlaylistsLoaded] = useState(false);
   const [playerReady, setPlayerReady] = useState(false);
   const [state, setState] = useState<PlayerState>({
@@ -107,7 +127,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setImportedPlaylists(readStoredPlaylists());
     setCuratedPlaylists(readStoredCuratedPlaylists());
-    setSongMetadata(readStoredSongMetadata());
+    const migration = migrateTagLibrary(
+      readStoredTagDefinitions(),
+      readStoredSongMetadata()
+    );
+    setSongMetadata(migration.metadata);
+    setTagDefinitions(migration.definitions);
+    writeStoredSongMetadata(migration.metadata);
+    writeStoredTagDefinitions(migration.definitions);
     setPlaylistsLoaded(true);
   }, []);
 
@@ -626,6 +653,133 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const createTagDefinition = useCallback(
+    (name: string, color: TagColor) => {
+      const nextName = normalizeTagName(name);
+      if (
+        !nextName ||
+        tagDefinitions.some(
+          (tag) =>
+            tag.name.toLocaleLowerCase() === nextName.toLocaleLowerCase()
+        )
+      ) {
+        return null;
+      }
+
+      const definition: TagDefinition = {
+        id: createTagId(),
+        name: nextName,
+        color,
+        createdAt: new Date().toISOString()
+      };
+      setTagDefinitions((current) => {
+        const next = [...current, definition];
+        writeStoredTagDefinitions(next);
+        return next;
+      });
+      return definition;
+    },
+    [tagDefinitions]
+  );
+
+  const updateTagDefinition = useCallback(
+    (
+      tagId: string,
+      updates: {
+        name: string;
+        color: TagColor;
+      }
+    ) => {
+      const nextName = normalizeTagName(updates.name);
+      const currentDefinition = tagDefinitions.find((tag) => tag.id === tagId);
+      if (
+        !currentDefinition ||
+        !nextName ||
+        tagDefinitions.some(
+          (tag) =>
+            tag.id !== tagId &&
+            tag.name.toLocaleLowerCase() === nextName.toLocaleLowerCase()
+        )
+      ) {
+        return false;
+      }
+
+      setTagDefinitions((current) => {
+        const next = current.map((tag) =>
+          tag.id === tagId
+            ? { ...tag, name: nextName, color: updates.color }
+            : tag
+        );
+        writeStoredTagDefinitions(next);
+        return next;
+      });
+      setSongMetadata((current) => {
+        const next = Object.fromEntries(
+          Object.entries(current).map(([videoId, metadata]) => [
+            videoId,
+            {
+              ...metadata,
+              keywords: metadata.keywords.map((keyword) =>
+                keyword.tagId === tagId ||
+                (!keyword.tagId &&
+                  keyword.name.toLocaleLowerCase() ===
+                    currentDefinition.name.toLocaleLowerCase())
+                  ? {
+                      ...keyword,
+                      tagId,
+                      name: nextName,
+                      color: updates.color
+                    }
+                  : keyword
+              )
+            }
+          ])
+        );
+        writeStoredSongMetadata(next);
+        return next;
+      });
+      return true;
+    },
+    [tagDefinitions]
+  );
+
+  const deleteTagDefinition = useCallback(
+    (tagId: string) => {
+      const definition = tagDefinitions.find((tag) => tag.id === tagId);
+      if (!definition) {
+        return;
+      }
+
+      setTagDefinitions((current) => {
+        const next = current.filter((tag) => tag.id !== tagId);
+        writeStoredTagDefinitions(next);
+        return next;
+      });
+      setSongMetadata((current) => {
+        const next = Object.fromEntries(
+          Object.entries(current).map(([videoId, metadata]) => [
+            videoId,
+            {
+              ...metadata,
+              keywords: metadata.keywords.filter(
+                (keyword) =>
+                  keyword.tagId !== tagId &&
+                  !(
+                    !keyword.tagId &&
+                    keyword.name.toLocaleLowerCase() ===
+                      definition.name.toLocaleLowerCase()
+                  )
+              )
+            }
+          ])
+        );
+        writeStoredSongMetadata(next);
+        return next;
+      });
+    },
+    [tagDefinitions]
+  );
+
   const updatePlaylistVideo = useCallback((
     playlistId: string,
     videoId: string,
@@ -774,6 +928,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       curatedPlaylists,
       allPlaylists,
       songMetadata,
+      tagDefinitions,
       currentVideo,
       playerReady,
       playlistsLoaded,
@@ -791,6 +946,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       reorderPlaylistVideos,
       setPlaylistVideoFrequency,
       updateSongMetadata,
+      createTagDefinition,
+      updateTagDefinition,
+      deleteTagDefinition,
       updatePlaylistVideo,
       setPlayerReady,
       togglePlayback,
@@ -807,6 +965,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       curatedPlaylists,
       allPlaylists,
       songMetadata,
+      tagDefinitions,
       currentVideo,
       playerReady,
       playlistsLoaded,
@@ -824,6 +983,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       reorderPlaylistVideos,
       setPlaylistVideoFrequency,
       updateSongMetadata,
+      createTagDefinition,
+      updateTagDefinition,
+      deleteTagDefinition,
       updatePlaylistVideo,
       setPlayerReady,
       togglePlayback,

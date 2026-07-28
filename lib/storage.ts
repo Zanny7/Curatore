@@ -3,6 +3,7 @@ import type {
   BackgroundThemeId,
   Playlist,
   SongMetadata,
+  TagDefinition,
   ThemePreference
 } from "@/types";
 import { BACKGROUND_THEME_IDS } from "@/lib/background";
@@ -10,6 +11,7 @@ import { BACKGROUND_THEME_IDS } from "@/lib/background";
 const IMPORTED_PLAYLISTS_KEY = "curatore.importedPlaylists";
 const CURATED_PLAYLISTS_KEY = "curatore.curatedPlaylists";
 const SONG_METADATA_KEY = "curatore.songMetadata";
+const TAG_DEFINITIONS_KEY = "curatore.tagDefinitions";
 const THEME_KEY = "curatore.theme";
 const BACKGROUND_KEY = "curatore.background";
 const LEGACY_IMPORTED_PLAYLISTS_KEY = "ontrack.importedPlaylists";
@@ -119,6 +121,30 @@ export function writeStoredSongMetadata(
   }
 
   window.localStorage.setItem(SONG_METADATA_KEY, JSON.stringify(metadata));
+}
+
+export function readStoredTagDefinitions(): TagDefinition[] {
+  if (!canUseStorage()) {
+    return [];
+  }
+
+  try {
+    const value = window.localStorage.getItem(TAG_DEFINITIONS_KEY);
+    return value ? (JSON.parse(value) as TagDefinition[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function writeStoredTagDefinitions(definitions: TagDefinition[]) {
+  if (!canUseStorage()) {
+    return;
+  }
+
+  window.localStorage.setItem(
+    TAG_DEFINITIONS_KEY,
+    JSON.stringify(definitions)
+  );
 }
 
 export function readStoredTheme(): ThemePreference | null {
