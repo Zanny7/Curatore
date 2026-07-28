@@ -22,7 +22,6 @@ import {
   SlidersHorizontal,
   Square,
   Star,
-  Tag,
   Tags,
   Trash2,
   X
@@ -95,11 +94,6 @@ export default function PlaylistDetailPage() {
     kind: InlineEditorKind;
     videoId: string;
   } | null>(null);
-  const [quickTagVideoId, setQuickTagVideoId] = useState<string | null>(null);
-  const [tagRatingEditor, setTagRatingEditor] = useState<{
-    tagKey: string;
-    videoId: string;
-  } | null>(null);
   const [transfer, setTransfer] = useState<{
     ids: string[];
     mode: TransferMode;
@@ -145,12 +139,7 @@ export default function PlaylistDetailPage() {
   }, [undoRemoval]);
 
   useEffect(() => {
-    if (
-      !inlineEditor &&
-      !openMenuId &&
-      !quickTagVideoId &&
-      !tagRatingEditor
-    ) {
+    if (!inlineEditor && !openMenuId) {
       return;
     }
 
@@ -173,23 +162,12 @@ export default function PlaylistDetailPage() {
           setOpenMenuId(null);
         }
       }
-
-      if (quickTagVideoId || tagRatingEditor) {
-        const tagRoot = event.target.closest("[data-song-tag-root]");
-        const activeVideoId = quickTagVideoId ?? tagRatingEditor?.videoId;
-        if (tagRoot?.getAttribute("data-song-tag-root") !== activeVideoId) {
-          setQuickTagVideoId(null);
-          setTagRatingEditor(null);
-        }
-      }
     }
 
     function dismissOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setInlineEditor(null);
         setOpenMenuId(null);
-        setQuickTagVideoId(null);
-        setTagRatingEditor(null);
       }
     }
 
@@ -199,7 +177,7 @@ export default function PlaylistDetailPage() {
       document.removeEventListener("pointerdown", dismissOpenSongControls);
       document.removeEventListener("keydown", dismissOnEscape);
     };
-  }, [inlineEditor, openMenuId, quickTagVideoId, tagRatingEditor]);
+  }, [inlineEditor, openMenuId]);
 
   if (!playlistsLoaded) {
     return <p className="text-sm text-zinc-500">Loading playlist…</p>;
@@ -297,30 +275,10 @@ export default function PlaylistDetailPage() {
   }
 
   function toggleInlineEditor(videoId: string, kind: InlineEditorKind) {
-    setQuickTagVideoId(null);
-    setTagRatingEditor(null);
     setInlineEditor((current) =>
       current?.videoId === videoId && current.kind === kind
         ? null
         : { kind, videoId }
-    );
-  }
-
-  function toggleQuickTags(videoId: string) {
-    setInlineEditor(null);
-    setOpenMenuId(null);
-    setTagRatingEditor(null);
-    setQuickTagVideoId((current) => (current === videoId ? null : videoId));
-  }
-
-  function toggleTagRating(videoId: string, tagKey: string) {
-    setInlineEditor(null);
-    setOpenMenuId(null);
-    setQuickTagVideoId(null);
-    setTagRatingEditor((current) =>
-      current?.videoId === videoId && current.tagKey === tagKey
-        ? null
-        : { tagKey, videoId }
     );
   }
 
@@ -598,10 +556,6 @@ export default function PlaylistDetailPage() {
             const isSelected = selectedIds.has(video.id);
             const editorKind =
               inlineEditor?.videoId === video.id ? inlineEditor.kind : null;
-            const activeTagRatingKey =
-              tagRatingEditor?.videoId === video.id
-                ? tagRatingEditor.tagKey
-                : null;
             const editor = editorKind ? (
               <SongInlineEditor
                 frequency={video.playFrequency ?? 1}
@@ -719,27 +673,19 @@ export default function PlaylistDetailPage() {
                       labelInside
                       onClick={() => toggleInlineEditor(video.id, "rating")}
                     />
-                    <SongTagControls
-                      activeRatingTagKey={activeTagRatingKey}
-                      compact
+                    <CompactSongControl
+                      active={metadata.keywords.length > 0}
+                      ariaLabel={`Edit tags for ${video.title}`}
+                      controlKey={`${video.id}:tags`}
                       editor={editorKind === "tags" ? editor : null}
-                      metadata={metadata}
-                      onEdit={() => toggleInlineEditor(video.id, "tags")}
-                      onQuickToggle={() => toggleQuickTags(video.id)}
-                      onTagRatingToggle={(tagKey) =>
-                        toggleTagRating(video.id, tagKey)
+                      icon={Tags}
+                      label={
+                        <TagPills
+                          keywords={metadata.keywords}
+                          selectedTag={selectedSortTag}
+                        />
                       }
-                      onUpdate={(keywords) =>
-                        updateSongMetadata(video.id, {
-                          ...metadata,
-                          keywords
-                        })
-                      }
-                      quickOpen={quickTagVideoId === video.id}
-                      selectedTag={selectedSortTag}
-                      songTitle={video.title}
-                      tagDefinitions={tagDefinitions}
-                      videoId={video.id}
+                      onClick={() => toggleInlineEditor(video.id, "tags")}
                     />
                   </div>
                 </div>
@@ -790,27 +736,24 @@ export default function PlaylistDetailPage() {
                     </button>
                     {editorKind === "rating" ? editor : null}
                   </div>
-                  <SongTagControls
-                    activeRatingTagKey={activeTagRatingKey}
-                    editor={editorKind === "tags" ? editor : null}
-                    metadata={metadata}
-                    onEdit={() => toggleInlineEditor(video.id, "tags")}
-                    onQuickToggle={() => toggleQuickTags(video.id)}
-                    onTagRatingToggle={(tagKey) =>
-                      toggleTagRating(video.id, tagKey)
-                    }
-                    onUpdate={(keywords) =>
-                      updateSongMetadata(video.id, {
-                        ...metadata,
-                        keywords
-                      })
-                    }
-                    quickOpen={quickTagVideoId === video.id}
-                    selectedTag={selectedSortTag}
-                    songTitle={video.title}
-                    tagDefinitions={tagDefinitions}
-                    videoId={video.id}
-                  />
+                  <div
+                    className="relative flex w-full items-center gap-1"
+                    data-song-editor-root={`${video.id}:tags`}
+                  >
+                    <button
+                      aria-label={`Edit tags for ${video.title}`}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
+                      onClick={() => toggleInlineEditor(video.id, "tags")}
+                      type="button"
+                    >
+                      <Tags aria-hidden="true" className="h-4 w-4 shrink-0" />
+                    </button>
+                    <TagPills
+                      keywords={metadata.keywords}
+                      selectedTag={selectedSortTag}
+                    />
+                    {editorKind === "tags" ? editor : null}
+                  </div>
                 </div>
                 <div
                   className="relative shrink-0 2xl:justify-self-center"
@@ -1250,178 +1193,11 @@ function CompactSongControl({
   );
 }
 
-function SongTagControls({
-  activeRatingTagKey,
-  compact = false,
-  editor,
-  metadata,
-  onEdit,
-  onQuickToggle,
-  onTagRatingToggle,
-  onUpdate,
-  quickOpen,
-  selectedTag,
-  songTitle,
-  tagDefinitions,
-  videoId
-}: {
-  activeRatingTagKey: string | null;
-  compact?: boolean;
-  editor?: React.ReactNode;
-  metadata: SongMetadata;
-  onEdit: () => void;
-  onQuickToggle: () => void;
-  onTagRatingToggle: (tagKey: string) => void;
-  onUpdate: (keywords: SongMetadata["keywords"]) => void;
-  quickOpen: boolean;
-  selectedTag: string | null;
-  songTitle: string;
-  tagDefinitions: TagDefinition[];
-  videoId: string;
-}) {
-  const availableTags =
-    metadata.keywords.length >= 3
-      ? []
-      : tagDefinitions
-          .filter(
-            (tag) =>
-              !metadata.keywords.some(
-                (keyword) =>
-                  keyword.tagId === tag.id ||
-                  keyword.name.toLocaleLowerCase() ===
-                    tag.name.toLocaleLowerCase()
-              )
-          )
-          .sort((left, right) =>
-            left.name.localeCompare(right.name, undefined, {
-              sensitivity: "base"
-            })
-          );
-  const layoutGroupId = `song-tags-${compact ? "compact" : "wide"}-${videoId}`;
-
-  function assignTag(tag: TagDefinition) {
-    if (metadata.keywords.length >= 3) {
-      return;
-    }
-    onUpdate([
-      ...metadata.keywords,
-      {
-        color: tag.color,
-        name: tag.name,
-        rating: TAG_MATCH_DEFAULT,
-        tagId: tag.id
-      }
-    ]);
-    onQuickToggle();
-  }
-
-  function updateRating(
-    keywordToUpdate: SongMetadata["keywords"][number],
-    rating: number
-  ) {
-    const tagKey =
-      keywordToUpdate.tagId ?? keywordToUpdate.name.toLocaleLowerCase();
-    onUpdate(
-      metadata.keywords.map((keyword) =>
-        (keyword.tagId ?? keyword.name.toLocaleLowerCase()) === tagKey
-          ? { ...keyword, rating: normalizeTagRating(rating) }
-          : keyword
-      )
-    );
-  }
-
-  return (
-    <LayoutGroup id={layoutGroupId}>
-      <div
-        className={`relative flex min-w-0 items-start gap-1 ${
-          compact ? "shrink-0" : "w-full"
-        }`}
-        data-song-editor-root={`${videoId}:tags`}
-        data-song-tag-root={videoId}
-      >
-        <div className="flex shrink-0 flex-col gap-0.5">
-          <button
-            aria-expanded={quickOpen}
-            aria-label={`Quick assign tag to ${songTitle}`}
-            className={`relative flex h-7 w-8 items-center justify-center rounded-lg transition hover:bg-zinc-100 hover:text-accent-strong disabled:cursor-default disabled:opacity-30 dark:hover:bg-white/5 ${
-              quickOpen
-                ? "text-accent-strong"
-                : "text-zinc-500 dark:text-zinc-400"
-            }`}
-            disabled={availableTags.length === 0}
-            onClick={onQuickToggle}
-            type="button"
-          >
-            <Tag aria-hidden="true" className="h-4 w-4" />
-            <Plus
-              aria-hidden="true"
-              className="absolute right-1 top-0.5 h-2.5 w-2.5"
-            />
-          </button>
-          <button
-            aria-label={`Edit tags for ${songTitle}`}
-            className={`flex h-7 w-8 items-center justify-center rounded-lg transition hover:bg-zinc-100 hover:text-accent-strong dark:hover:bg-white/5 ${
-              metadata.keywords.length > 0
-                ? "text-accent-strong"
-                : "text-zinc-500 dark:text-zinc-400"
-            }`}
-            onClick={onEdit}
-            type="button"
-          >
-            <Tags aria-hidden="true" className="h-4 w-4 shrink-0" />
-          </button>
-        </div>
-
-        <TagPills
-          activeTagKey={activeRatingTagKey}
-          keywords={metadata.keywords}
-          onRatingChange={updateRating}
-          onTagClick={onTagRatingToggle}
-          selectedTag={selectedTag}
-        />
-
-        {quickOpen && availableTags.length > 0 ? (
-          <div className="absolute bottom-[calc(100%+0.4rem)] left-0 z-[90] flex w-[min(18rem,calc(100vw-2rem))] flex-wrap gap-2 2xl:left-auto 2xl:right-0">
-            {availableTags.map((tag) => (
-              <motion.button
-                aria-label={`Assign ${tag.name}`}
-                className={`rounded-full px-2.5 py-1 text-xs font-semibold shadow-[0_10px_24px_rgba(0,0,0,0.38)] ring-1 ring-black/10 transition hover:-translate-y-0.5 hover:brightness-110 dark:ring-white/10 ${getTagPillClasses(
-                  tag.color,
-                  false
-                )}`}
-                key={tag.id}
-                layout
-                layoutId={`tag-${tag.id}`}
-                onClick={() => assignTag(tag)}
-                transition={{ type: "spring", stiffness: 460, damping: 34 }}
-                type="button"
-              >
-                {tag.name}
-              </motion.button>
-            ))}
-          </div>
-        ) : null}
-
-        {editor}
-      </div>
-    </LayoutGroup>
-  );
-}
-
 function TagPills({
-  activeTagKey,
   keywords,
-  onRatingChange,
-  onTagClick,
   selectedTag
 }: {
-  activeTagKey?: string | null;
   keywords: SongMetadata["keywords"];
-  onRatingChange?: (
-    keyword: SongMetadata["keywords"][number],
-    rating: number
-  ) => void;
-  onTagClick?: (tagKey: string) => void;
   selectedTag: string | null;
 }) {
   if (keywords.length === 0) {
@@ -1439,8 +1215,6 @@ function TagPills({
   return (
     <span className="inline-flex min-w-0 flex-col items-stretch gap-1">
       {sortedKeywords.map((keyword) => {
-        const tagKey = keyword.tagId ?? keyword.name.toLocaleLowerCase();
-        const editingRating = tagKey === activeTagKey;
         const highlighted =
           keyword.name.toLocaleLowerCase() ===
           selectedTag?.toLocaleLowerCase();
@@ -1450,76 +1224,22 @@ function TagPills({
         );
         return (
           <span
-            className="relative inline-flex min-w-0"
+            aria-label={`${keyword.name}, ${keyword.rating} out of ${TAG_MATCH_MAX} match`}
+            className={`group/tag relative inline-flex min-h-5 max-w-28 items-center justify-center rounded-full px-2 py-0.5 text-center text-xs font-semibold leading-none ${pillColors}`}
             key={keyword.name}
+            tabIndex={0}
           >
-            <motion.button
-              aria-expanded={editingRating}
-              aria-label={`${keyword.name}, ${keyword.rating} out of ${TAG_MATCH_MAX}. Change tag rating`}
-              className={`group/tag relative inline-flex min-h-5 max-w-28 items-center justify-center rounded-full px-2 py-0.5 text-center text-xs font-semibold leading-none ${pillColors}`}
-              layout
-              layoutId={keyword.tagId ? `tag-${keyword.tagId}` : undefined}
-              onClick={() => onTagClick?.(tagKey)}
-              transition={{ type: "spring", stiffness: 460, damping: 34 }}
-              type="button"
-            >
-              <ExpandableTagName
-                expandedClassName={pillColors}
-                name={keyword.name}
-              />
-              {!editingRating ? (
-                <span className="theme-tooltip pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden h-6 -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-md px-2 text-[9px] leading-none shadow-lg group-hover/tag:flex group-focus/tag:flex">
-                  {keyword.rating}/{TAG_MATCH_MAX}
-                </span>
-              ) : null}
-            </motion.button>
-            {editingRating && onRatingChange ? (
-              <TagRatingSlider
-                keyword={keyword}
-                onChange={(rating) => onRatingChange(keyword, rating)}
-              />
-            ) : null}
+            <ExpandableTagName
+              expandedClassName={pillColors}
+              name={keyword.name}
+            />
+            <span className="theme-tooltip pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden h-6 -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-md px-2 text-[9px] leading-none shadow-lg group-hover/tag:flex group-focus/tag:flex">
+              {keyword.rating}/{TAG_MATCH_MAX}
+            </span>
           </span>
         );
       })}
     </span>
-  );
-}
-
-function TagRatingSlider({
-  keyword,
-  onChange
-}: {
-  keyword: SongMetadata["keywords"][number];
-  onChange: (rating: number) => void;
-}) {
-  return (
-    <div
-      aria-label={`Set ${keyword.name} rating`}
-      className="theme-menu absolute left-0 top-[calc(100%+0.35rem)] z-[100] w-32 rounded-xl px-2.5 pb-2 pt-2 shadow-xl 2xl:left-auto 2xl:right-0"
-      onClick={(event) => event.stopPropagation()}
-    >
-      <div className="flex items-center justify-between text-[10px] font-semibold">
-        <span className="text-zinc-500 dark:text-zinc-400">Rating</span>
-        <span className="text-accent-strong">
-          {keyword.rating}/{TAG_MATCH_MAX}
-        </span>
-      </div>
-      <input
-        aria-label={`${keyword.name} rating from ${TAG_MATCH_MIN} to ${TAG_MATCH_MAX}`}
-        className="mt-1.5 h-4 w-full cursor-pointer accent-[var(--accent)]"
-        max={TAG_MATCH_MAX}
-        min={TAG_MATCH_MIN}
-        onChange={(event) => onChange(Number(event.target.value))}
-        step={1}
-        type="range"
-        value={keyword.rating}
-      />
-      <div className="-mt-0.5 flex justify-between text-[9px] text-zinc-500 dark:text-zinc-400">
-        <span>{TAG_MATCH_MIN}</span>
-        <span>{TAG_MATCH_MAX}</span>
-      </div>
-    </div>
   );
 }
 
