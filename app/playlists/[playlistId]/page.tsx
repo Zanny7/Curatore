@@ -1619,33 +1619,33 @@ function SongInlineEditor({
                   </button>
                   <div
                     aria-label={`${definition.name} match rating`}
-                    className="ml-auto inline-flex h-8 items-center rounded-lg border border-[var(--app-sidebar-border)]"
+                    className="ml-auto inline-flex h-7 items-center rounded-lg border border-[var(--app-sidebar-border)]"
                     role="group"
                   >
                     <button
                       aria-label={`Decrease ${definition.name} match`}
-                      className="flex h-full w-8 items-center justify-center rounded-l-lg text-zinc-400 transition hover:bg-white/5 hover:text-white disabled:opacity-25"
+                      className="flex h-full w-6 items-center justify-center rounded-l-lg text-zinc-400 transition hover:bg-white/5 hover:text-white disabled:opacity-25"
                       disabled={assignment.rating <= TAG_MATCH_MIN}
                       onClick={() =>
                         updateTagRating(definition, assignment.rating - 1)
                       }
                       type="button"
                     >
-                      <Minus aria-hidden="true" className="h-3.5 w-3.5" />
+                      <Minus aria-hidden="true" className="h-3 w-3" />
                     </button>
-                    <span className="w-10 text-center text-xs font-semibold text-zinc-300">
+                    <span className="w-8 text-center text-xs font-semibold text-zinc-300">
                       {assignment.rating}/{TAG_MATCH_MAX}
                     </span>
                     <button
                       aria-label={`Increase ${definition.name} match`}
-                      className="flex h-full w-8 items-center justify-center rounded-r-lg text-zinc-400 transition hover:bg-white/5 hover:text-white disabled:opacity-25"
+                      className="flex h-full w-6 items-center justify-center rounded-r-lg text-zinc-400 transition hover:bg-white/5 hover:text-white disabled:opacity-25"
                       disabled={assignment.rating >= TAG_MATCH_MAX}
                       onClick={() =>
                         updateTagRating(definition, assignment.rating + 1)
                       }
                       type="button"
                     >
-                      <Plus aria-hidden="true" className="h-3.5 w-3.5" />
+                      <Plus aria-hidden="true" className="h-3 w-3" />
                     </button>
                   </div>
                 </motion.div>
