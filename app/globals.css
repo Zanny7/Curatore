@@ -224,6 +224,44 @@ option {
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
   }
 
+  .tag-rating-slider {
+    height: 0.875rem;
+    appearance: none;
+    background: transparent;
+  }
+
+  .tag-rating-slider::-webkit-slider-runnable-track {
+    height: 0.25rem;
+    border-radius: 9999px;
+    background: var(--theme-border-strong);
+  }
+
+  .tag-rating-slider::-webkit-slider-thumb {
+    width: 0.875rem;
+    height: 0.875rem;
+    margin-top: -0.3125rem;
+    appearance: none;
+    border: 2px solid var(--theme-surface-raised);
+    border-radius: 9999px;
+    background: var(--theme-accent);
+    box-shadow: 0 0 0 2px var(--theme-focus-ring);
+  }
+
+  .tag-rating-slider::-moz-range-track {
+    height: 0.25rem;
+    border-radius: 9999px;
+    background: var(--theme-border-strong);
+  }
+
+  .tag-rating-slider::-moz-range-thumb {
+    width: 0.875rem;
+    height: 0.875rem;
+    border: 2px solid var(--theme-surface-raised);
+    border-radius: 9999px;
+    background: var(--theme-accent);
+    box-shadow: 0 0 0 2px var(--theme-focus-ring);
+  }
+
   .theme-overlay {
     background: var(--theme-overlay);
   }

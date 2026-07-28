@@ -22,6 +22,7 @@ import {
   SlidersHorizontal,
   Square,
   Star,
+  Tag,
   Tags,
   Trash2,
   X
@@ -56,7 +57,17 @@ import type {
 } from "@/types";
 
 type TransferMode = "copy" | "move";
-type InlineEditorKind = "frequency" | "rating" | "tags";
+type InlineEditorKind =
+  | "frequency"
+  | "rating"
+  | "tags"
+  | "quick-tags"
+  | "tag-rating";
+type InlineEditorState = {
+  kind: InlineEditorKind;
+  tagKey?: string;
+  videoId: string;
+};
 type SortKey = "song" | "frequency" | "rating" | "tags";
 type SortDirection = "asc" | "desc";
 
@@ -90,10 +101,9 @@ export default function PlaylistDetailPage() {
   );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [inlineEditor, setInlineEditor] = useState<{
-    kind: InlineEditorKind;
-    videoId: string;
-  } | null>(null);
+  const [inlineEditor, setInlineEditor] = useState<InlineEditorState | null>(
+    null
+  );
   const [transfer, setTransfer] = useState<{
     ids: string[];
     mode: TransferMode;
@@ -150,7 +160,12 @@ export default function PlaylistDetailPage() {
 
       if (inlineEditor) {
         const editorRoot = event.target.closest("[data-song-editor-root]");
-        const activeEditor = `${inlineEditor.videoId}:${inlineEditor.kind}`;
+        const activeEditor =
+          inlineEditor.kind === "tags" ||
+          inlineEditor.kind === "quick-tags" ||
+          inlineEditor.kind === "tag-rating"
+            ? `${inlineEditor.videoId}:tags`
+            : `${inlineEditor.videoId}:${inlineEditor.kind}`;
         if (editorRoot?.getAttribute("data-song-editor-root") !== activeEditor) {
           setInlineEditor(null);
         }
@@ -279,6 +294,16 @@ export default function PlaylistDetailPage() {
       current?.videoId === videoId && current.kind === kind
         ? null
         : { kind, videoId }
+    );
+  }
+
+  function toggleTagRatingEditor(videoId: string, tagKey: string) {
+    setInlineEditor((current) =>
+      current?.videoId === videoId &&
+      current.kind === "tag-rating" &&
+      current.tagKey === tagKey
+        ? null
+        : { kind: "tag-rating", tagKey, videoId }
     );
   }
 
@@ -556,7 +581,12 @@ export default function PlaylistDetailPage() {
             const isSelected = selectedIds.has(video.id);
             const editorKind =
               inlineEditor?.videoId === video.id ? inlineEditor.kind : null;
-            const editor = editorKind ? (
+            const activeTagKey =
+              editorKind === "tag-rating" ? inlineEditor?.tagKey ?? null : null;
+            const editor =
+              editorKind === "frequency" ||
+              editorKind === "rating" ||
+              editorKind === "tags" ? (
               <SongInlineEditor
                 frequency={video.playFrequency ?? 1}
                 kind={editorKind}
@@ -580,7 +610,56 @@ export default function PlaylistDetailPage() {
                 }}
                 tagDefinitions={tagDefinitions}
               />
-            ) : null;
+              ) : null;
+            const quickTagEditor =
+              editorKind === "quick-tags" ? (
+                <QuickTagPicker
+                  assignedTags={metadata.keywords}
+                  onAssign={(tag) => {
+                    if (
+                      metadata.keywords.length >= 3 ||
+                      metadata.keywords.some(
+                        (keyword) =>
+                          keyword.tagId === tag.id ||
+                          keyword.name.toLocaleLowerCase() ===
+                            tag.name.toLocaleLowerCase()
+                      )
+                    ) {
+                      return;
+                    }
+                    updateSongMetadata(video.id, {
+                      ...metadata,
+                      keywords: [
+                        ...metadata.keywords,
+                        {
+                          color: tag.color,
+                          name: tag.name,
+                          rating: TAG_MATCH_DEFAULT,
+                          tagId: tag.id
+                        }
+                      ]
+                    });
+                    setInlineEditor(null);
+                  }}
+                  tagDefinitions={tagDefinitions}
+                />
+              ) : null;
+            const updateTagMatch = (
+              keywordToUpdate: SongMetadata["keywords"][number],
+              rating: number
+            ) => {
+              const tagKey =
+                keywordToUpdate.tagId ??
+                keywordToUpdate.name.toLocaleLowerCase();
+              updateSongMetadata(video.id, {
+                ...metadata,
+                keywords: metadata.keywords.map((keyword) =>
+                  (keyword.tagId ?? keyword.name.toLocaleLowerCase()) === tagKey
+                    ? { ...keyword, rating: normalizeTagRating(rating) }
+                    : keyword
+                )
+              });
+            };
             return (
               <div
                 className={`relative flex items-center gap-3 border-b border-zinc-200 p-3 transition last:border-b-0 dark:border-white/10 2xl:grid 2xl:grid-cols-[minmax(0,1fr)_5rem_5rem_8rem_2.5rem] 2xl:gap-x-2 ${
@@ -673,20 +752,50 @@ export default function PlaylistDetailPage() {
                       labelInside
                       onClick={() => toggleInlineEditor(video.id, "rating")}
                     />
-                    <CompactSongControl
-                      active={metadata.keywords.length > 0}
-                      ariaLabel={`Edit tags for ${video.title}`}
-                      controlKey={`${video.id}:tags`}
-                      editor={editorKind === "tags" ? editor : null}
-                      icon={Tags}
-                      label={
-                        <TagPills
-                          keywords={metadata.keywords}
-                          selectedTag={selectedSortTag}
+                    <div
+                      className="relative inline-flex min-w-0 items-start gap-0.5"
+                      data-song-editor-root={`${video.id}:tags`}
+                    >
+                      <div className="flex shrink-0 flex-col gap-0.5">
+                        <QuickTagButton
+                          active={editorKind === "quick-tags"}
+                          onClick={() =>
+                            toggleInlineEditor(video.id, "quick-tags")
+                          }
+                          songTitle={video.title}
                         />
-                      }
-                      onClick={() => toggleInlineEditor(video.id, "tags")}
-                    />
+                        <button
+                          aria-label={`Edit tags for ${video.title}`}
+                          className={`flex h-7 w-7 items-center justify-center rounded-md transition hover:bg-zinc-100 hover:text-accent-strong dark:hover:bg-white/5 ${
+                            metadata.keywords.length > 0
+                              ? "text-accent-strong"
+                              : "text-zinc-500 dark:text-zinc-400"
+                          }`}
+                          onClick={() => toggleInlineEditor(video.id, "tags")}
+                          type="button"
+                        >
+                          <Tags
+                            aria-hidden="true"
+                            className="h-3.5 w-3.5"
+                          />
+                        </button>
+                      </div>
+                      <TagPills
+                        activeTagKey={activeTagKey}
+                        keywords={metadata.keywords}
+                        onRatingChange={updateTagMatch}
+                        onTagClick={(keyword) =>
+                          toggleTagRatingEditor(
+                            video.id,
+                            keyword.tagId ??
+                              keyword.name.toLocaleLowerCase()
+                          )
+                        }
+                        selectedTag={selectedSortTag}
+                      />
+                      {editorKind === "tags" ? editor : null}
+                      {quickTagEditor}
+                    </div>
                   </div>
                 </div>
                 </div>
@@ -740,19 +849,37 @@ export default function PlaylistDetailPage() {
                     className="relative flex w-full items-center gap-1"
                     data-song-editor-root={`${video.id}:tags`}
                   >
-                    <button
-                      aria-label={`Edit tags for ${video.title}`}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
-                      onClick={() => toggleInlineEditor(video.id, "tags")}
-                      type="button"
-                    >
-                      <Tags aria-hidden="true" className="h-4 w-4 shrink-0" />
-                    </button>
+                    <div className="flex shrink-0 flex-col gap-0.5">
+                      <QuickTagButton
+                        active={editorKind === "quick-tags"}
+                        onClick={() =>
+                          toggleInlineEditor(video.id, "quick-tags")
+                        }
+                        songTitle={video.title}
+                      />
+                      <button
+                        aria-label={`Edit tags for ${video.title}`}
+                        className="flex h-7 w-8 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
+                        onClick={() => toggleInlineEditor(video.id, "tags")}
+                        type="button"
+                      >
+                        <Tags aria-hidden="true" className="h-4 w-4 shrink-0" />
+                      </button>
+                    </div>
                     <TagPills
+                      activeTagKey={activeTagKey}
                       keywords={metadata.keywords}
+                      onRatingChange={updateTagMatch}
+                      onTagClick={(keyword) =>
+                        toggleTagRatingEditor(
+                          video.id,
+                          keyword.tagId ?? keyword.name.toLocaleLowerCase()
+                        )
+                      }
                       selectedTag={selectedSortTag}
                     />
                     {editorKind === "tags" ? editor : null}
+                    {quickTagEditor}
                   </div>
                 </div>
                 <div
@@ -1193,11 +1320,110 @@ function CompactSongControl({
   );
 }
 
+function QuickTagButton({
+  active,
+  onClick,
+  songTitle
+}: {
+  active: boolean;
+  onClick: () => void;
+  songTitle: string;
+}) {
+  return (
+    <button
+      aria-label={`Quick assign tag to ${songTitle}`}
+      className={`flex h-7 w-8 items-center justify-center rounded-lg transition hover:bg-zinc-100 hover:text-accent-strong dark:hover:bg-white/5 ${
+        active
+          ? "bg-accent-soft text-accent-strong"
+          : "text-zinc-500 dark:text-zinc-400"
+      }`}
+      onClick={onClick}
+      type="button"
+    >
+      <span className="relative">
+        <Tag aria-hidden="true" className="h-4 w-4" />
+        <Plus
+          aria-hidden="true"
+          className="absolute -right-1.5 -top-1.5 h-2.5 w-2.5 rounded-full bg-[var(--app-control-bg)]"
+        />
+      </span>
+    </button>
+  );
+}
+
+function QuickTagPicker({
+  assignedTags,
+  onAssign,
+  tagDefinitions
+}: {
+  assignedTags: SongMetadata["keywords"];
+  onAssign: (tag: TagDefinition) => void;
+  tagDefinitions: TagDefinition[];
+}) {
+  const availableTags =
+    assignedTags.length >= 3
+      ? []
+      : tagDefinitions
+          .filter(
+            (tag) =>
+              !assignedTags.some(
+                (keyword) =>
+                  keyword.tagId === tag.id ||
+                  keyword.name.toLocaleLowerCase() ===
+                    tag.name.toLocaleLowerCase()
+              )
+          )
+          .sort((left, right) =>
+            left.name.localeCompare(right.name, undefined, {
+              sensitivity: "base"
+            })
+          );
+
+  return (
+    <div
+      aria-label="Quick assign tag"
+      className="theme-menu absolute left-0 top-[calc(100%+0.35rem)] z-[80] flex w-[min(16rem,calc(100vw-2rem))] flex-wrap gap-2 rounded-xl p-2.5 backdrop-blur-xl 2xl:left-auto 2xl:right-0"
+    >
+      {availableTags.length > 0 ? (
+        availableTags.map((tag) => (
+          <button
+            aria-label={`Assign ${tag.name}`}
+            className={`rounded-full px-2.5 py-1 text-xs font-semibold transition hover:brightness-110 ${getTagPillClasses(
+              tag.color,
+              false
+            )}`}
+            key={tag.id}
+            onClick={() => onAssign(tag)}
+            type="button"
+          >
+            {tag.name}
+          </button>
+        ))
+      ) : (
+        <span className="w-full px-1 py-1 text-center text-xs text-zinc-500 dark:text-zinc-400">
+          {assignedTags.length >= 3
+            ? "Three tags already assigned."
+            : "No available tags."}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function TagPills({
+  activeTagKey,
   keywords,
+  onRatingChange,
+  onTagClick,
   selectedTag
 }: {
+  activeTagKey?: string | null;
   keywords: SongMetadata["keywords"];
+  onRatingChange?: (
+    keyword: SongMetadata["keywords"][number],
+    rating: number
+  ) => void;
+  onTagClick?: (keyword: SongMetadata["keywords"][number]) => void;
   selectedTag: string | null;
 }) {
   if (keywords.length === 0) {
@@ -1215,6 +1441,8 @@ function TagPills({
   return (
     <span className="inline-flex min-w-0 flex-col items-stretch gap-1">
       {sortedKeywords.map((keyword) => {
+        const tagKey = keyword.tagId ?? keyword.name.toLocaleLowerCase();
+        const editingRating = activeTagKey === tagKey;
         const highlighted =
           keyword.name.toLocaleLowerCase() ===
           selectedTag?.toLocaleLowerCase();
@@ -1224,22 +1452,73 @@ function TagPills({
         );
         return (
           <span
-            aria-label={`${keyword.name}, ${keyword.rating} out of ${TAG_MATCH_MAX} match`}
-            className={`group/tag relative inline-flex min-h-5 max-w-28 items-center justify-center rounded-full px-2 py-0.5 text-center text-xs font-semibold leading-none ${pillColors}`}
+            className="relative inline-flex min-w-0"
             key={keyword.name}
-            tabIndex={0}
           >
-            <ExpandableTagName
-              expandedClassName={pillColors}
-              name={keyword.name}
-            />
-            <span className="theme-tooltip pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden h-6 -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-md px-2 text-[9px] leading-none shadow-lg group-hover/tag:flex group-focus/tag:flex">
-              {keyword.rating}/{TAG_MATCH_MAX}
-            </span>
+            <button
+              aria-expanded={editingRating}
+              aria-label={`${keyword.name}, ${keyword.rating} out of ${TAG_MATCH_MAX}. Change tag rating`}
+              className={`group/tag relative inline-flex min-h-5 max-w-28 items-center justify-center rounded-full px-2 py-0.5 text-center text-xs font-semibold leading-none ${pillColors}`}
+              onClick={() => onTagClick?.(keyword)}
+              type="button"
+            >
+              <ExpandableTagName
+                expandedClassName={pillColors}
+                name={keyword.name}
+              />
+              {!editingRating ? (
+                <span className="theme-tooltip pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden h-6 -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-md px-2 text-[9px] leading-none shadow-lg group-hover/tag:flex group-focus/tag:flex">
+                  {keyword.rating}/{TAG_MATCH_MAX}
+                </span>
+              ) : null}
+            </button>
+            {editingRating && onRatingChange ? (
+              <TagRatingSlider
+                keyword={keyword}
+                onChange={(rating) => onRatingChange(keyword, rating)}
+              />
+            ) : null}
           </span>
         );
       })}
     </span>
+  );
+}
+
+function TagRatingSlider({
+  keyword,
+  onChange
+}: {
+  keyword: SongMetadata["keywords"][number];
+  onChange: (rating: number) => void;
+}) {
+  return (
+    <div
+      aria-label={`Set ${keyword.name} rating`}
+      className="theme-menu absolute left-0 top-[calc(100%+0.35rem)] z-[90] w-32 rounded-xl p-2.5 text-left backdrop-blur-xl"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <div className="flex items-center justify-between gap-2 text-[10px] font-semibold">
+        <span className="text-zinc-500 dark:text-zinc-400">Rating</span>
+        <span className="text-accent-strong">
+          {keyword.rating}/{TAG_MATCH_MAX}
+        </span>
+      </div>
+      <input
+        aria-label={`${keyword.name} rating from ${TAG_MATCH_MIN} to ${TAG_MATCH_MAX}`}
+        className="tag-rating-slider mt-2 w-full cursor-pointer"
+        max={TAG_MATCH_MAX}
+        min={TAG_MATCH_MIN}
+        onChange={(event) => onChange(Number(event.target.value))}
+        step={1}
+        type="range"
+        value={keyword.rating}
+      />
+      <div className="mt-1 flex justify-between text-[9px] text-zinc-500">
+        <span>{TAG_MATCH_MIN}</span>
+        <span>{TAG_MATCH_MAX}</span>
+      </div>
+    </div>
   );
 }
 
