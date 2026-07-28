@@ -6,6 +6,9 @@ import type {
 
 export const TAG_MAX_LENGTH = 12;
 export const TAG_PILL_VISIBLE_LENGTH = 6;
+export const TAG_MATCH_MIN = 1;
+export const TAG_MATCH_MAX = 5;
+export const TAG_MATCH_DEFAULT = 3;
 
 export const TAG_COLOR_OPTIONS: {
   color: TagColor;
@@ -40,6 +43,13 @@ export function isTagColor(value: unknown): value is TagColor {
 
 export function normalizeTagName(name: string) {
   return name.trim().slice(0, TAG_MAX_LENGTH);
+}
+
+export function normalizeTagRating(rating: number) {
+  return Math.min(
+    TAG_MATCH_MAX,
+    Math.max(TAG_MATCH_MIN, Math.round(rating))
+  );
 }
 
 export function formatTagPill(name: string) {
@@ -130,7 +140,7 @@ export function migrateTagLibrary(
               tagId: definition.id,
               name: definition.name,
               color: definition.color,
-              rating: Math.min(10, Math.max(1, Math.round(keyword.rating)))
+              rating: normalizeTagRating(keyword.rating)
             }
           ];
         })

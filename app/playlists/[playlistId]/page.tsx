@@ -11,6 +11,7 @@ import {
   Copy,
   GripVertical,
   Info,
+  Minus,
   MoreHorizontal,
   MoveRight,
   Pencil,
@@ -25,11 +26,13 @@ import {
   Trash2,
   X
 } from "lucide-react";
+import { LayoutGroup, motion } from "framer-motion";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   type FormEvent,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState
@@ -38,6 +41,10 @@ import { usePlayer } from "@/context/PlayerContext";
 import {
   formatTagPill,
   getTagPillClasses,
+  normalizeTagRating,
+  TAG_MATCH_DEFAULT,
+  TAG_MATCH_MAX,
+  TAG_MATCH_MIN,
   TAG_PILL_VISIBLE_LENGTH
 } from "@/lib/tags";
 import type {
@@ -1217,7 +1224,7 @@ function TagPills({
         );
         return (
           <span
-            aria-label={`${keyword.name}, ${keyword.rating} out of 10 match`}
+            aria-label={`${keyword.name}, ${keyword.rating} out of ${TAG_MATCH_MAX} match`}
             className={`group/tag relative inline-flex min-h-5 max-w-28 items-center justify-center rounded-full px-2 py-0.5 text-center text-xs font-semibold leading-none ${pillColors}`}
             key={keyword.name}
             tabIndex={0}
@@ -1227,7 +1234,7 @@ function TagPills({
               name={keyword.name}
             />
             <span className="theme-tooltip pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden h-6 -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-md px-2 text-[9px] leading-none shadow-lg group-hover/tag:flex group-focus/tag:flex">
-              {keyword.rating}/10
+              {keyword.rating}/{TAG_MATCH_MAX}
             </span>
           </span>
         );
@@ -1481,8 +1488,14 @@ function SongInlineEditor({
   onSaveTags: (keywords: SongMetadata["keywords"]) => void;
   tagDefinitions: TagDefinition[];
 }) {
-  const [keywords, setKeywords] = useState(metadata.keywords);
+  const [keywords, setKeywords] = useState(
+    metadata.keywords.map((keyword) => ({
+      ...keyword,
+      rating: normalizeTagRating(keyword.rating)
+    }))
+  );
   const [tagSearch, setTagSearch] = useState("");
+  const tagLayoutGroupId = useId();
   const atTagLimit = keywords.length >= 3;
   const visibleTags = [...tagDefinitions]
     .filter((tag) =>
@@ -1491,6 +1504,16 @@ function SongInlineEditor({
     .sort((left, right) =>
       left.name.localeCompare(right.name, undefined, { sensitivity: "base" })
     );
+  const assignedTags = keywords.flatMap((keyword) => {
+    const definition = tagDefinitions.find(
+      (tag) =>
+        tag.id === keyword.tagId ||
+        (!keyword.tagId &&
+          tag.name.toLocaleLowerCase() === keyword.name.toLocaleLowerCase())
+    );
+    return definition ? [{ assignment: keyword, definition }] : [];
+  });
+  const availableTags = visibleTags.filter((tag) => !findAssignment(tag));
 
   function findAssignment(tag: TagDefinition) {
     return keywords.find(
@@ -1528,13 +1551,14 @@ function SongInlineEditor({
           tagId: tag.id,
           name: tag.name,
           color: tag.color,
-          rating: 5
+          rating: TAG_MATCH_DEFAULT
         }
       ];
     });
   }
 
   function updateTagRating(tag: TagDefinition, rating: number) {
+    const normalizedRating = normalizeTagRating(rating);
     setKeywords((current) =>
       current.map((keyword) =>
         keyword.tagId === tag.id ||
@@ -1545,7 +1569,7 @@ function SongInlineEditor({
               tagId: tag.id,
               name: tag.name,
               color: tag.color,
-              rating
+              rating: normalizedRating
             }
           : keyword
       )
@@ -1553,104 +1577,158 @@ function SongInlineEditor({
   }
 
   const tagEditor = (
-    <div className="mt-3 space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
-          Created tags
-        </p>
-        <span className="text-[10px] text-zinc-500">
-          {keywords.length}/3 assigned
-        </span>
-      </div>
-
-      {tagDefinitions.length > 0 ? (
-        <>
-          <input
-            aria-label="Search created tags"
-            className="theme-field h-9 w-full rounded-lg px-2.5 text-xs"
-            onChange={(event) => setTagSearch(event.target.value)}
-            placeholder="Search tags"
-            value={tagSearch}
-          />
-          <div className="max-h-56 space-y-1.5 overflow-y-auto pr-1">
-            {visibleTags.length > 0 ? (
-              visibleTags.map((tag) => {
-                const assignment = findAssignment(tag);
-                const selected = Boolean(assignment);
-                return (
+    <LayoutGroup id={tagLayoutGroupId}>
+      <div className="mt-3 space-y-3">
+        <section className="space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
+              Assigned
+            </p>
+            <span className="text-[10px] text-zinc-500">
+              {keywords.length}/3
+            </span>
+          </div>
+          {assignedTags.length > 0 ? (
+            <div className="space-y-1.5">
+              {assignedTags.map(({ assignment, definition }) => (
+                <motion.div
+                  className="theme-control flex min-h-10 items-center gap-2 rounded-lg px-2 py-1.5"
+                  key={definition.id}
+                  layout
+                  layoutId={`assigned-tag-${definition.id}`}
+                  transition={{
+                    type: "spring",
+                    stiffness: 420,
+                    damping: 34
+                  }}
+                >
+                  <button
+                    aria-label={`Unassign ${definition.name}`}
+                    className={`inline-flex min-w-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${getTagPillClasses(
+                      definition.color,
+                      true
+                    )}`}
+                    onClick={() => toggleTag(definition)}
+                    type="button"
+                  >
+                    <Check
+                      aria-hidden="true"
+                      className="h-3 w-3 shrink-0"
+                    />
+                    <span className="truncate">{definition.name}</span>
+                  </button>
                   <div
-                    className="flex min-h-9 items-center gap-2 rounded-lg px-1 py-0.5"
-                    key={tag.id}
+                    aria-label={`${definition.name} match rating`}
+                    className="ml-auto inline-flex h-8 items-center rounded-lg border border-[var(--app-sidebar-border)]"
+                    role="group"
                   >
                     <button
-                      aria-pressed={selected}
-                      className={`inline-flex min-w-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-35 ${getTagPillClasses(
+                      aria-label={`Decrease ${definition.name} match`}
+                      className="flex h-full w-8 items-center justify-center rounded-l-lg text-zinc-400 transition hover:bg-white/5 hover:text-white disabled:opacity-25"
+                      disabled={assignment.rating <= TAG_MATCH_MIN}
+                      onClick={() =>
+                        updateTagRating(definition, assignment.rating - 1)
+                      }
+                      type="button"
+                    >
+                      <Minus aria-hidden="true" className="h-3.5 w-3.5" />
+                    </button>
+                    <span className="w-10 text-center text-xs font-semibold text-zinc-300">
+                      {assignment.rating}/{TAG_MATCH_MAX}
+                    </span>
+                    <button
+                      aria-label={`Increase ${definition.name} match`}
+                      className="flex h-full w-8 items-center justify-center rounded-r-lg text-zinc-400 transition hover:bg-white/5 hover:text-white disabled:opacity-25"
+                      disabled={assignment.rating >= TAG_MATCH_MAX}
+                      onClick={() =>
+                        updateTagRating(definition, assignment.rating + 1)
+                      }
+                      type="button"
+                    >
+                      <Plus aria-hidden="true" className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-lg border border-dashed border-[var(--app-sidebar-border)] px-3 py-3 text-center text-xs text-zinc-500">
+              Select a tag below to assign it.
+            </p>
+          )}
+        </section>
+
+        {tagDefinitions.length > 0 ? (
+          <section className="space-y-2 border-t border-[var(--app-sidebar-border)] pt-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
+              Available
+            </p>
+            <input
+              aria-label="Search available tags"
+              className="theme-field h-9 w-full rounded-lg px-2.5 text-xs"
+              onChange={(event) => setTagSearch(event.target.value)}
+              placeholder="Search tags"
+              value={tagSearch}
+            />
+            <div className="grid max-h-40 grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-2 overflow-y-auto pr-1">
+              {availableTags.length > 0 ? (
+                availableTags.map((tag) => (
+                  <motion.div
+                    key={tag.id}
+                    layout
+                    layoutId={`assigned-tag-${tag.id}`}
+                    transition={{
+                      type: "spring",
+                      stiffness: 420,
+                      damping: 34
+                    }}
+                  >
+                    <button
+                      aria-label={`Assign ${tag.name}`}
+                      className={`flex w-full min-w-0 items-center justify-center rounded-full px-2.5 py-1 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-35 ${getTagPillClasses(
                         tag.color,
-                        selected
+                        false
                       )}`}
-                      disabled={!selected && atTagLimit}
+                      disabled={atTagLimit}
                       onClick={() => toggleTag(tag)}
                       type="button"
                     >
-                      {selected ? (
-                        <Check
-                          aria-hidden="true"
-                          className="h-3 w-3 shrink-0"
-                        />
-                      ) : null}
                       <span className="truncate">{tag.name}</span>
                     </button>
-                    {assignment ? (
-                      <select
-                        aria-label={`${tag.name} match rating`}
-                        className="theme-field ml-auto h-8 w-[4.5rem] rounded-lg px-1 text-xs"
-                        onChange={(event) =>
-                          updateTagRating(tag, Number(event.target.value))
-                        }
-                        value={assignment.rating}
-                      >
-                        {Array.from(
-                          { length: 10 },
-                          (_, index) => index + 1
-                        ).map((value) => (
-                          <option key={value} value={value}>
-                            {value}/10
-                          </option>
-                        ))}
-                      </select>
-                    ) : null}
-                  </div>
-                );
-              })
-            ) : (
-              <p className="py-5 text-center text-xs text-zinc-500">
-                No tags match your search.
-              </p>
-            )}
+                  </motion.div>
+                ))
+              ) : (
+                <p className="col-span-full py-3 text-center text-xs text-zinc-500">
+                  {tagSearch
+                    ? "No tags match your search."
+                    : "Every created tag is assigned."}
+                </p>
+              )}
+            </div>
+          </section>
+        ) : (
+          <div className="rounded-lg border border-dashed border-[var(--app-sidebar-border)] p-4 text-center">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              No tags have been created yet.
+            </p>
+            <Link
+              className="mt-2 inline-flex text-xs font-semibold text-accent-strong hover:underline"
+              href="/tags"
+            >
+              Open Tags
+            </Link>
           </div>
-        </>
-      ) : (
-        <div className="rounded-lg border border-dashed border-[var(--app-sidebar-border)] p-4 text-center">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            No tags have been created yet.
-          </p>
-          <Link
-            className="mt-2 inline-flex text-xs font-semibold text-accent-strong hover:underline"
-            href="/tags"
-          >
-            Open Tags
-          </Link>
-        </div>
-      )}
+        )}
 
-      <button
-        className="h-9 w-full rounded-lg border border-[var(--accent)] bg-accent-soft text-xs font-semibold text-accent-strong transition hover:bg-[var(--accent)] hover:text-black"
-        onClick={() => onSaveTags(keywords)}
-        type="button"
-      >
-        Done
-      </button>
-    </div>
+        <button
+          className="h-9 w-full rounded-lg border border-[var(--accent)] bg-accent-soft text-xs font-semibold text-accent-strong transition hover:bg-[var(--accent)] hover:text-black"
+          onClick={() => onSaveTags(keywords)}
+          type="button"
+        >
+          Done
+        </button>
+      </div>
+    </LayoutGroup>
   );
 
   return (
@@ -1853,7 +1931,7 @@ function BulkMetadataDialog({
   const [rating, setRating] = useState("");
   const [frequency, setFrequency] = useState("");
   const [tagId, setTagId] = useState("");
-  const [tagRating, setTagRating] = useState(5);
+  const [tagRating, setTagRating] = useState(TAG_MATCH_DEFAULT);
   const selectedTag = tagDefinitions.find((tag) => tag.id === tagId);
   const hasChanges = Boolean(rating || frequency || selectedTag);
 
@@ -1922,10 +2000,13 @@ function BulkMetadataDialog({
               onChange={(event) => setTagRating(Number(event.target.value))}
               value={tagRating}
             >
-              {Array.from({ length: 10 }, (_, index) => index + 1).map(
+              {Array.from(
+                { length: TAG_MATCH_MAX - TAG_MATCH_MIN + 1 },
+                (_, index) => index + TAG_MATCH_MIN
+              ).map(
                 (value) => (
                   <option key={value} value={value}>
-                    {value}/10
+                    {value}/{TAG_MATCH_MAX}
                   </option>
                 )
               )}

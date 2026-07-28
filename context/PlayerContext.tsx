@@ -22,7 +22,8 @@ import {
 import {
   createTagId,
   migrateTagLibrary,
-  normalizeTagName
+  normalizeTagName,
+  normalizeTagRating
 } from "@/lib/tags";
 import type {
   PlayerState,
@@ -639,7 +640,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           ...current,
           [videoId]: {
             ...metadata,
-            keywords: metadata.keywords.slice(0, 3),
+            keywords: metadata.keywords.slice(0, 3).map((keyword) => ({
+              ...keyword,
+              rating: normalizeTagRating(keyword.rating)
+            })),
             rating:
               metadata.rating === undefined
                 ? undefined
