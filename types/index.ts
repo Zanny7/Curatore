@@ -32,7 +32,17 @@ export type VideoItem = {
   playFrequency?: number;
 };
 
+export type TagColor =
+  | "theme"
+  | "slate"
+  | "blue"
+  | "emerald"
+  | "amber"
+  | "rose"
+  | "violet";
+
 export type KeywordRating = {
+  color?: TagColor;
   name: string;
   rating: number;
 };

@@ -39,6 +39,7 @@ import type {
   Playlist,
   RemovedPlaylistVideo,
   SongMetadata,
+  TagColor,
   VideoItem
 } from "@/types";
 
@@ -49,6 +50,48 @@ type SortDirection = "asc" | "desc";
 
 const TAG_MAX_LENGTH = 12;
 const TAG_PILL_VISIBLE_LENGTH = 6;
+const TAG_COLOR_OPTIONS: {
+  color: TagColor;
+  label: string;
+  swatchClassName: string;
+}[] = [
+  {
+    color: "theme",
+    label: "Theme",
+    swatchClassName:
+      "bg-[linear-gradient(135deg,#71717a_0_48%,var(--accent)_52%_100%)]"
+  },
+  {
+    color: "slate",
+    label: "Slate",
+    swatchClassName: "bg-slate-500"
+  },
+  {
+    color: "blue",
+    label: "Blue",
+    swatchClassName: "bg-blue-500"
+  },
+  {
+    color: "emerald",
+    label: "Emerald",
+    swatchClassName: "bg-emerald-500"
+  },
+  {
+    color: "amber",
+    label: "Amber",
+    swatchClassName: "bg-amber-500"
+  },
+  {
+    color: "rose",
+    label: "Rose",
+    swatchClassName: "bg-rose-500"
+  },
+  {
+    color: "violet",
+    label: "Violet",
+    swatchClassName: "bg-violet-500"
+  }
+];
 
 export default function PlaylistDetailPage() {
   const router = useRouter();
@@ -1216,9 +1259,10 @@ function TagPills({
         const highlighted =
           keyword.name.toLocaleLowerCase() ===
           selectedTag?.toLocaleLowerCase();
-        const pillColors = highlighted
-          ? "bg-accent-soft text-accent-strong"
-          : "bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/[0.06] dark:text-zinc-400 dark:ring-white/10";
+        const pillColors = getTagPillClasses(
+          keyword.color ?? "theme",
+          highlighted
+        );
         return (
           <span
             aria-label={`${keyword.name}, ${keyword.rating} out of 10 match`}
@@ -1246,6 +1290,35 @@ function formatTagPill(name: string) {
     : name;
 }
 
+function getTagPillClasses(color: TagColor, active: boolean) {
+  if (color === "theme") {
+    return active
+      ? "bg-accent-soft text-accent-strong ring-1 ring-inset ring-[var(--accent-ring)]"
+      : "bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/[0.06] dark:text-zinc-400 dark:ring-white/10";
+  }
+
+  const colorClasses: Record<Exclude<TagColor, "theme">, string> = {
+    slate:
+      "bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200 dark:bg-slate-500/15 dark:text-slate-300 dark:ring-slate-400/20",
+    blue:
+      "bg-blue-100 text-blue-700 ring-1 ring-inset ring-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-400/20",
+    emerald:
+      "bg-emerald-100 text-emerald-700 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-400/20",
+    amber:
+      "bg-amber-100 text-amber-700 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-400/20",
+    rose:
+      "bg-rose-100 text-rose-700 ring-1 ring-inset ring-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:ring-rose-400/20",
+    violet:
+      "bg-violet-100 text-violet-700 ring-1 ring-inset ring-violet-200 dark:bg-violet-500/15 dark:text-violet-300 dark:ring-violet-400/20"
+  };
+
+  return `${colorClasses[color]} ${
+    active
+      ? "outline outline-2 outline-offset-1 outline-[var(--accent)]"
+      : ""
+  }`;
+}
+
 function ExpandableTagName({
   expandedClassName,
   name
@@ -1260,12 +1333,69 @@ function ExpandableTagName({
       <span className="truncate">{formatTagPill(name)}</span>
       {truncated ? (
         <span
-          className={`pointer-events-none absolute left-1/2 top-1/2 z-[60] hidden min-h-5 w-max -translate-x-1/2 -translate-y-1/2 items-center justify-center whitespace-nowrap rounded-full px-2 py-0.5 text-center leading-none shadow-md group-hover/tag:inline-flex group-focus/tag:inline-flex ${expandedClassName}`}
+          className={`pointer-events-none absolute left-0 top-1/2 z-[60] hidden min-h-5 w-max -translate-y-1/2 items-center justify-center whitespace-nowrap rounded-full px-2 py-0.5 text-center leading-none shadow-md group-hover/tag:inline-flex group-focus/tag:inline-flex ${expandedClassName}`}
         >
           {name}
         </span>
       ) : null}
     </>
+  );
+}
+
+function TagColorPicker({
+  disabled = false,
+  onChange,
+  value
+}: {
+  disabled?: boolean;
+  onChange: (color: TagColor) => void;
+  value: TagColor;
+}) {
+  const selectedLabel =
+    TAG_COLOR_OPTIONS.find((option) => option.color === value)?.label ??
+    "Theme";
+
+  return (
+    <fieldset className="space-y-2" disabled={disabled}>
+      <legend className="sr-only">Tag color</legend>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
+        Color
+        <span className="ml-1.5 normal-case tracking-normal text-zinc-500 dark:text-zinc-300">
+          {selectedLabel}
+        </span>
+      </p>
+      <div className="flex items-center gap-1.5">
+        {TAG_COLOR_OPTIONS.map((option) => {
+          const selected = option.color === value;
+          return (
+            <button
+              aria-label={`${option.label} tag color`}
+              aria-pressed={selected}
+              className={`relative flex h-7 w-7 items-center justify-center rounded-full transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-40 ${
+                selected
+                  ? "ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--app-control-bg)]"
+                  : "hover:ring-2 hover:ring-zinc-400/40"
+              }`}
+              key={option.color}
+              onClick={() => onChange(option.color)}
+              title={option.label}
+              type="button"
+            >
+              <span
+                aria-hidden="true"
+                className={`h-5 w-5 rounded-full ${option.swatchClassName}`}
+              />
+              {selected ? (
+                <Check
+                  aria-hidden="true"
+                  className="absolute h-3 w-3 text-white drop-shadow"
+                />
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 
@@ -1494,6 +1624,7 @@ function SongInlineEditor({
   const [keywords, setKeywords] = useState(metadata.keywords);
   const [tagName, setTagName] = useState("");
   const [tagRating, setTagRating] = useState(5);
+  const [tagColor, setTagColor] = useState<TagColor>("theme");
   const atTagLimit = keywords.length >= 3;
   const unusedSuggestions = suggestions.filter(
     (suggestion) =>
@@ -1516,7 +1647,10 @@ function SongInlineEditor({
       if (withoutMatch.length === current.length && current.length >= 3) {
         return current;
       }
-      return [...withoutMatch, { name: trimmed, rating: tagRating }].slice(0, 3);
+      return [
+        ...withoutMatch,
+        { color: tagColor, name: trimmed, rating: tagRating }
+      ].slice(0, 3);
     });
     setTagName("");
   }
@@ -1597,34 +1731,40 @@ function SongInlineEditor({
         <div className="mt-3 space-y-3">
           <div className="flex min-h-6 items-start justify-between gap-2">
             <div className="flex min-w-0 flex-wrap gap-1.5">
-              {keywords.map((keyword) => (
-                <span
-                  className="group/tag relative inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-semibold text-accent-strong"
-                  key={keyword.name}
-                >
-                  <ExpandableTagName
-                    expandedClassName="bg-accent-soft text-accent-strong"
-                    name={keyword.name}
-                  />
-                  <button
-                    aria-label={`Remove ${keyword.name}`}
-                    className="rounded-full hover:text-red-400"
-                    onClick={() =>
-                      setKeywords((current) =>
-                        current.filter(
-                          (item) => item.name !== keyword.name
-                        )
-                      )
-                    }
-                    type="button"
+              {keywords.map((keyword) => {
+                const pillColors = getTagPillClasses(
+                  keyword.color ?? "theme",
+                  false
+                );
+                return (
+                  <span
+                    className={`group/tag relative inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${pillColors}`}
+                    key={keyword.name}
                   >
-                    <X aria-hidden="true" className="h-3 w-3" />
-                  </button>
-                  <span className="theme-tooltip pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden h-6 -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-md px-2 text-[9px] leading-none shadow-lg group-hover/tag:flex group-focus-within/tag:flex">
-                    {keyword.rating}/10
+                    <ExpandableTagName
+                      expandedClassName={pillColors}
+                      name={keyword.name}
+                    />
+                    <button
+                      aria-label={`Remove ${keyword.name}`}
+                      className="rounded-full hover:text-red-400"
+                      onClick={() =>
+                        setKeywords((current) =>
+                          current.filter(
+                            (item) => item.name !== keyword.name
+                          )
+                        )
+                      }
+                      type="button"
+                    >
+                      <X aria-hidden="true" className="h-3 w-3" />
+                    </button>
+                    <span className="theme-tooltip pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden h-6 -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-md px-2 text-[9px] leading-none shadow-lg group-hover/tag:flex group-focus-within/tag:flex">
+                      {keyword.rating}/10
+                    </span>
                   </span>
-                </span>
-              ))}
+                );
+              })}
             </div>
             <span className="shrink-0 pt-1 text-[10px] text-zinc-500">
               {keywords.length}/3 tags
@@ -1670,6 +1810,12 @@ function SongInlineEditor({
               <Plus aria-hidden="true" className="h-4 w-4" />
             </button>
           </form>
+
+          <TagColorPicker
+            disabled={atTagLimit}
+            onChange={setTagColor}
+            value={tagColor}
+          />
 
           {!atTagLimit && unusedSuggestions.length > 0 ? (
             <div>
@@ -1824,7 +1970,7 @@ function BulkMetadataDialog({
   onSave: (updates: {
     frequency?: number;
     rating?: number;
-    tag?: { name: string; rating: number };
+    tag?: SongMetadata["keywords"][number];
   }) => void;
   suggestions: string[];
 }) {
@@ -1832,6 +1978,7 @@ function BulkMetadataDialog({
   const [frequency, setFrequency] = useState("");
   const [tagName, setTagName] = useState("");
   const [tagRating, setTagRating] = useState(5);
+  const [tagColor, setTagColor] = useState<TagColor>("theme");
   const hasChanges = Boolean(rating || frequency || tagName.trim());
 
   return (
@@ -1902,6 +2049,9 @@ function BulkMetadataDialog({
             <option key={suggestion} value={suggestion} />
           ))}
         </datalist>
+        <div className="mt-3">
+          <TagColorPicker onChange={setTagColor} value={tagColor} />
+        </div>
       </div>
       <div className="mt-7 flex gap-3">
         <button
@@ -1920,6 +2070,7 @@ function BulkMetadataDialog({
               rating: rating ? Number(rating) : undefined,
               tag: tagName.trim()
                 ? {
+                    color: tagColor,
                     name: tagName.trim().slice(0, TAG_MAX_LENGTH),
                     rating: tagRating
                   }
