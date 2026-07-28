@@ -47,8 +47,8 @@ type InlineEditorKind = "frequency" | "rating" | "tags";
 type SortKey = "song" | "frequency" | "rating" | "tags";
 type SortDirection = "asc" | "desc";
 
-const TAG_MAX_LENGTH = 16;
-const TAG_PILL_VISIBLE_LENGTH = 8;
+const TAG_MAX_LENGTH = 12;
+const TAG_PILL_VISIBLE_LENGTH = 6;
 
 export default function PlaylistDetailPage() {
   const router = useRouter();
@@ -509,7 +509,7 @@ export default function PlaylistDetailPage() {
             />
             <SortingHelpLink />
           </div>
-          <div className="hidden grid-cols-[minmax(0,1fr)_5rem_5rem_13rem_2.5rem] items-center gap-x-2 border-b border-zinc-200 px-3 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:border-white/10 2xl:grid">
+          <div className="hidden grid-cols-[minmax(0,1fr)_5rem_5rem_8rem_2.5rem] items-center gap-x-2 border-b border-zinc-200 px-3 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:border-white/10 2xl:grid">
             <div className="grid grid-cols-[1.25rem_2rem_6rem_minmax(0,1fr)] items-center gap-x-3">
               <span />
               <span />
@@ -583,7 +583,7 @@ export default function PlaylistDetailPage() {
             ) : null;
             return (
               <div
-                className={`relative flex items-center gap-3 border-b border-zinc-200 p-3 transition last:border-b-0 dark:border-white/10 2xl:grid 2xl:grid-cols-[minmax(0,1fr)_5rem_5rem_13rem_2.5rem] 2xl:gap-x-2 ${
+                className={`relative flex items-center gap-3 border-b border-zinc-200 p-3 transition last:border-b-0 dark:border-white/10 2xl:grid 2xl:grid-cols-[minmax(0,1fr)_5rem_5rem_8rem_2.5rem] 2xl:gap-x-2 ${
                   isSelected ? "bg-accent-subtle" : "hover:bg-zinc-50/80 dark:hover:bg-white/[0.025]"
                 }`}
                 draggable={!sort}
@@ -1062,7 +1062,7 @@ function TagSortControl({
             ? `Choose tag to sort by, currently ${selectedTag}`
             : "Choose tag to sort by"
         }
-        className={`flex h-6 w-36 items-center justify-center gap-1 rounded-md border px-2 text-[10px] normal-case tracking-normal transition ${
+        className={`flex h-6 w-16 items-center justify-center gap-0.5 rounded-md border px-1 text-[10px] normal-case tracking-normal transition ${
           selectedTag
             ? "border-zinc-300 bg-zinc-50 text-zinc-400 dark:border-white/10 dark:bg-white/5"
             : "border-zinc-200 text-zinc-400 hover:border-zinc-400 hover:bg-zinc-50 dark:border-white/10 dark:hover:border-white/25 dark:hover:bg-white/5"
@@ -1073,7 +1073,7 @@ function TagSortControl({
       >
         {selectedTag ? (
           <span className="min-w-0 flex-1 truncate text-center">
-            {selectedTag}
+            {formatTagPill(selectedTag)}
           </span>
         ) : (
           <span>-</span>
@@ -1240,7 +1240,7 @@ function TagPills({
 
 function formatTagPill(name: string) {
   return name.length > TAG_PILL_VISIBLE_LENGTH
-    ? `${name.slice(0, TAG_PILL_VISIBLE_LENGTH)}…`
+    ? `${name.slice(0, TAG_PILL_VISIBLE_LENGTH)}..`
     : name;
 }
 
