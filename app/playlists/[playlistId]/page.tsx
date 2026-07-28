@@ -1606,7 +1606,7 @@ function SongInlineEditor({
                     aria-label={`Unassign ${definition.name}`}
                     className={`inline-flex min-w-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${getTagPillClasses(
                       definition.color,
-                      true
+                      false
                     )}`}
                     onClick={() => toggleTag(definition)}
                     type="button"
