@@ -1216,18 +1216,20 @@ function TagPills({
         const highlighted =
           keyword.name.toLocaleLowerCase() ===
           selectedTag?.toLocaleLowerCase();
+        const pillColors = highlighted
+          ? "bg-accent-soft text-accent-strong"
+          : "bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/[0.06] dark:text-zinc-400 dark:ring-white/10";
         return (
           <span
             aria-label={`${keyword.name}, ${keyword.rating} out of 10 match`}
-            className={`group/tag relative inline-flex min-h-5 max-w-28 items-center justify-center rounded-full px-2 py-0.5 text-center text-xs font-semibold leading-none ${
-              highlighted
-                ? "bg-accent-soft text-accent-strong"
-                : "bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/[0.06] dark:text-zinc-400 dark:ring-white/10"
-            }`}
+            className={`group/tag relative inline-flex min-h-5 max-w-28 items-center justify-center rounded-full px-2 py-0.5 text-center text-xs font-semibold leading-none ${pillColors}`}
             key={keyword.name}
             tabIndex={0}
           >
-            <span className="truncate">{formatTagPill(keyword.name)}</span>
+            <ExpandableTagName
+              expandedClassName={pillColors}
+              name={keyword.name}
+            />
             <span className="theme-tooltip pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden h-6 -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-md px-2 text-[9px] leading-none shadow-lg group-hover/tag:flex group-focus/tag:flex">
               {keyword.rating}/10
             </span>
@@ -1242,6 +1244,29 @@ function formatTagPill(name: string) {
   return name.length > TAG_PILL_VISIBLE_LENGTH
     ? `${name.slice(0, TAG_PILL_VISIBLE_LENGTH)}..`
     : name;
+}
+
+function ExpandableTagName({
+  expandedClassName,
+  name
+}: {
+  expandedClassName: string;
+  name: string;
+}) {
+  const truncated = name.length > TAG_PILL_VISIBLE_LENGTH;
+
+  return (
+    <>
+      <span className="truncate">{formatTagPill(name)}</span>
+      {truncated ? (
+        <span
+          className={`pointer-events-none absolute left-1/2 top-1/2 z-[60] hidden min-h-5 w-max -translate-x-1/2 -translate-y-1/2 items-center justify-center whitespace-nowrap rounded-full px-2 py-0.5 text-center leading-none shadow-md group-hover/tag:inline-flex group-focus/tag:inline-flex ${expandedClassName}`}
+        >
+          {name}
+        </span>
+      ) : null}
+    </>
+  );
 }
 
 function BulkToolbar({
@@ -1577,7 +1602,10 @@ function SongInlineEditor({
                   className="group/tag relative inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-semibold text-accent-strong"
                   key={keyword.name}
                 >
-                  {formatTagPill(keyword.name)}
+                  <ExpandableTagName
+                    expandedClassName="bg-accent-soft text-accent-strong"
+                    name={keyword.name}
+                  />
                   <button
                     aria-label={`Remove ${keyword.name}`}
                     className="rounded-full hover:text-red-400"
