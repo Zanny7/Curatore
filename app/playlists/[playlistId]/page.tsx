@@ -38,14 +38,14 @@ import {
   useState
 } from "react";
 import { usePlayer } from "@/context/PlayerContext";
+import { SongQuickTagExperiment } from "@/components/SongQuickTagExperiment";
 import {
   formatTagPill,
   getTagPillClasses,
   normalizeTagRating,
   TAG_MATCH_DEFAULT,
   TAG_MATCH_MAX,
-  TAG_MATCH_MIN,
-  TAG_PILL_VISIBLE_LENGTH
+  TAG_MATCH_MIN
 } from "@/lib/tags";
 import type {
   Playlist,
@@ -673,19 +673,26 @@ export default function PlaylistDetailPage() {
                       labelInside
                       onClick={() => toggleInlineEditor(video.id, "rating")}
                     />
-                    <CompactSongControl
-                      active={metadata.keywords.length > 0}
-                      ariaLabel={`Edit tags for ${video.title}`}
+                    <SongQuickTagExperiment
+                      compact
                       controlKey={`${video.id}:tags`}
-                      editor={editorKind === "tags" ? editor : null}
-                      icon={Tags}
-                      label={
-                        <TagPills
-                          keywords={metadata.keywords}
-                          selectedTag={selectedSortTag}
-                        />
+                      detailedEditor={
+                        editorKind === "tags" ? editor : undefined
                       }
-                      onClick={() => toggleInlineEditor(video.id, "tags")}
+                      keywords={metadata.keywords}
+                      onOpenDetailed={() =>
+                        toggleInlineEditor(video.id, "tags")
+                      }
+                      onOpenQuick={() => setInlineEditor(null)}
+                      onSaveTags={(keywords) =>
+                        updateSongMetadata(video.id, {
+                          ...metadata,
+                          keywords
+                        })
+                      }
+                      selectedTag={selectedSortTag}
+                      songTitle={video.title}
+                      tagDefinitions={tagDefinitions}
                     />
                   </div>
                 </div>
@@ -736,24 +743,26 @@ export default function PlaylistDetailPage() {
                     </button>
                     {editorKind === "rating" ? editor : null}
                   </div>
-                  <div
-                    className="relative flex w-full items-center gap-1"
-                    data-song-editor-root={`${video.id}:tags`}
-                  >
-                    <button
-                      aria-label={`Edit tags for ${video.title}`}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
-                      onClick={() => toggleInlineEditor(video.id, "tags")}
-                      type="button"
-                    >
-                      <Tags aria-hidden="true" className="h-4 w-4 shrink-0" />
-                    </button>
-                    <TagPills
-                      keywords={metadata.keywords}
-                      selectedTag={selectedSortTag}
-                    />
-                    {editorKind === "tags" ? editor : null}
-                  </div>
+                  <SongQuickTagExperiment
+                    controlKey={`${video.id}:tags`}
+                    detailedEditor={
+                      editorKind === "tags" ? editor : undefined
+                    }
+                    keywords={metadata.keywords}
+                    onOpenDetailed={() =>
+                      toggleInlineEditor(video.id, "tags")
+                    }
+                    onOpenQuick={() => setInlineEditor(null)}
+                    onSaveTags={(keywords) =>
+                      updateSongMetadata(video.id, {
+                        ...metadata,
+                        keywords
+                      })
+                    }
+                    selectedTag={selectedSortTag}
+                    songTitle={video.title}
+                    tagDefinitions={tagDefinitions}
+                  />
                 </div>
                 <div
                   className="relative shrink-0 2xl:justify-self-center"
@@ -1190,79 +1199,6 @@ function CompactSongControl({
       ) : null}
       {editor}
     </div>
-  );
-}
-
-function TagPills({
-  keywords,
-  selectedTag
-}: {
-  keywords: SongMetadata["keywords"];
-  selectedTag: string | null;
-}) {
-  if (keywords.length === 0) {
-    return null;
-  }
-
-  const sortedKeywords = [...keywords]
-    .slice(0, 3)
-    .sort(
-      (left, right) =>
-        right.rating - left.rating ||
-        left.name.localeCompare(right.name, undefined, { sensitivity: "base" })
-    );
-
-  return (
-    <span className="inline-flex min-w-0 flex-col items-stretch gap-1">
-      {sortedKeywords.map((keyword) => {
-        const highlighted =
-          keyword.name.toLocaleLowerCase() ===
-          selectedTag?.toLocaleLowerCase();
-        const pillColors = getTagPillClasses(
-          keyword.color ?? "theme",
-          highlighted
-        );
-        return (
-          <span
-            aria-label={`${keyword.name}, ${keyword.rating} out of ${TAG_MATCH_MAX} match`}
-            className={`group/tag relative inline-flex min-h-5 max-w-28 items-center justify-center rounded-full px-2 py-0.5 text-center text-xs font-semibold leading-none ${pillColors}`}
-            key={keyword.name}
-            tabIndex={0}
-          >
-            <ExpandableTagName
-              expandedClassName={pillColors}
-              name={keyword.name}
-            />
-            <span className="theme-tooltip pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden h-6 -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-md px-2 text-[9px] leading-none shadow-lg group-hover/tag:flex group-focus/tag:flex">
-              {keyword.rating}/{TAG_MATCH_MAX}
-            </span>
-          </span>
-        );
-      })}
-    </span>
-  );
-}
-
-function ExpandableTagName({
-  expandedClassName,
-  name
-}: {
-  expandedClassName: string;
-  name: string;
-}) {
-  const truncated = name.length > TAG_PILL_VISIBLE_LENGTH;
-
-  return (
-    <>
-      <span className="truncate">{formatTagPill(name)}</span>
-      {truncated ? (
-        <span
-          className={`pointer-events-none absolute left-0 top-1/2 z-[60] hidden min-h-5 w-max -translate-y-1/2 items-center justify-center whitespace-nowrap rounded-full px-2 py-0.5 text-center leading-none shadow-md group-hover/tag:inline-flex group-focus/tag:inline-flex ${expandedClassName}`}
-        >
-          {name}
-        </span>
-      ) : null}
-    </>
   );
 }
 
