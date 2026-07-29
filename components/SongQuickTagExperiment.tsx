@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, LayoutGroup } from "framer-motion";
-import { Plus, Tag, Tags } from "lucide-react";
+import { Plus, Tag, Tags, X } from "lucide-react";
 import {
   useEffect,
   useId,
@@ -16,8 +16,7 @@ import {
   normalizeTagRating,
   TAG_MATCH_DEFAULT,
   TAG_MATCH_MAX,
-  TAG_MATCH_MIN,
-  TAG_PILL_VISIBLE_LENGTH
+  TAG_MATCH_MIN
 } from "@/lib/tags";
 import type { SongMetadata, TagDefinition } from "@/types";
 
@@ -25,7 +24,9 @@ type SongQuickTagExperimentProps = {
   compact?: boolean;
   controlKey: string;
   detailedEditor?: ReactNode;
+  interactionId: string;
   keywords: SongMetadata["keywords"];
+  onFloatingStateChange: (interactionId: string, active: boolean) => void;
   onOpenDetailed: () => void;
   onOpenQuick: () => void;
   onSaveTags: (keywords: SongMetadata["keywords"]) => void;
@@ -50,7 +51,9 @@ export function SongQuickTagExperiment({
   compact = false,
   controlKey,
   detailedEditor,
+  interactionId,
   keywords,
+  onFloatingStateChange,
   onOpenDetailed,
   onOpenQuick,
   onSaveTags,
@@ -59,9 +62,15 @@ export function SongQuickTagExperiment({
   tagDefinitions
 }: SongQuickTagExperimentProps) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const ratingMenuRef = useRef<HTMLDivElement>(null);
+  const holdTimerRef = useRef<number | null>(null);
+  const longPressTriggeredRef = useRef(false);
   const layoutGroupId = useId();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [ratingTagId, setRatingTagId] = useState<string | null>(null);
+  const [removeTagKey, setRemoveTagKey] = useState<string | null>(null);
+  const [holdingTagKey, setHoldingTagKey] = useState<string | null>(null);
   const availableTags = useMemo(
     () =>
       tagDefinitions
@@ -76,17 +85,37 @@ export function SongQuickTagExperiment({
   const quickTagDisabled = keywords.length >= 3 || availableTags.length === 0;
 
   useEffect(() => {
-    if (!pickerOpen && !ratingTagId) {
+    if (!pickerOpen && !ratingTagId && !removeTagKey) {
       return;
     }
 
     function dismissFloatingControls(event: PointerEvent) {
-      if (
-        event.target instanceof Node &&
-        !rootRef.current?.contains(event.target)
-      ) {
-        setPickerOpen(false);
-        setRatingTagId(null);
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+
+      if (pickerOpen) {
+        const choice = event.target.closest("[data-quick-tag-choice]");
+        if (!choice || !pickerRef.current?.contains(choice)) {
+          setPickerOpen(false);
+        }
+      }
+
+      if (ratingTagId) {
+        const ratingTrigger = event.target.closest("[data-tag-rating-trigger]");
+        const clickedRatingControl =
+          ratingMenuRef.current?.contains(event.target) ||
+          (ratingTrigger && rootRef.current?.contains(ratingTrigger));
+        if (!clickedRatingControl) {
+          setRatingTagId(null);
+        }
+      }
+
+      if (removeTagKey) {
+        const removeControl = event.target.closest("[data-tag-remove-control]");
+        if (!removeControl || !rootRef.current?.contains(removeControl)) {
+          setRemoveTagKey(null);
+        }
       }
     }
 
@@ -94,6 +123,7 @@ export function SongQuickTagExperiment({
       if (event.key === "Escape") {
         setPickerOpen(false);
         setRatingTagId(null);
+        setRemoveTagKey(null);
       }
     }
 
@@ -103,7 +133,22 @@ export function SongQuickTagExperiment({
       document.removeEventListener("pointerdown", dismissFloatingControls);
       document.removeEventListener("keydown", dismissOnEscape);
     };
-  }, [pickerOpen, ratingTagId]);
+  }, [pickerOpen, ratingTagId, removeTagKey]);
+
+  const floatingControlActive =
+    pickerOpen ||
+    Boolean(ratingTagId) ||
+    Boolean(removeTagKey) ||
+    Boolean(holdingTagKey);
+
+  useEffect(() => {
+    onFloatingStateChange(interactionId, floatingControlActive);
+  }, [floatingControlActive, interactionId, onFloatingStateChange]);
+
+  useEffect(
+    () => () => onFloatingStateChange(interactionId, false),
+    [interactionId, onFloatingStateChange]
+  );
 
   useEffect(() => {
     if (quickTagDisabled) {
@@ -121,7 +166,24 @@ export function SongQuickTagExperiment({
     ) {
       setRatingTagId(null);
     }
-  }, [keywords, quickTagDisabled, ratingTagId]);
+    if (
+      removeTagKey &&
+      !keywords.some(
+        (keyword) => (keyword.tagId ?? keyword.name) === removeTagKey
+      )
+    ) {
+      setRemoveTagKey(null);
+    }
+  }, [keywords, quickTagDisabled, ratingTagId, removeTagKey]);
+
+  useEffect(
+    () => () => {
+      if (holdTimerRef.current !== null) {
+        window.clearTimeout(holdTimerRef.current);
+      }
+    },
+    []
+  );
 
   function assignTag(tag: TagDefinition) {
     if (keywords.length >= 3 || isAssigned(tag, keywords)) {
@@ -155,6 +217,36 @@ export function SongQuickTagExperiment({
     );
   }
 
+  function cancelRemoveHold() {
+    if (holdTimerRef.current !== null) {
+      window.clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+    setHoldingTagKey(null);
+  }
+
+  function revealRemoveButton(keywordKey: string) {
+    cancelRemoveHold();
+    setPickerOpen(false);
+    setRatingTagId(null);
+    setRemoveTagKey(keywordKey);
+  }
+
+  function removeTag(keyword: SongMetadata["keywords"][number]) {
+    onSaveTags(
+      keywords.filter(
+        (current) =>
+          !(
+            current.tagId === keyword.tagId ||
+            (!current.tagId &&
+              current.name.toLocaleLowerCase() ===
+                keyword.name.toLocaleLowerCase())
+          )
+      )
+    );
+    setRemoveTagKey(null);
+  }
+
   const sortedKeywords = [...keywords]
     .slice(0, 3)
     .sort(
@@ -181,7 +273,9 @@ export function SongQuickTagExperiment({
             className="relative flex h-5 w-7 items-center justify-center rounded-md text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong disabled:cursor-not-allowed disabled:opacity-30 dark:text-zinc-400 dark:hover:bg-white/5"
             disabled={quickTagDisabled}
             onClick={() => {
+              cancelRemoveHold();
               setRatingTagId(null);
+              setRemoveTagKey(null);
               if (!pickerOpen) {
                 onOpenQuick();
               }
@@ -199,8 +293,10 @@ export function SongQuickTagExperiment({
             aria-label={`Edit tags for ${songTitle}`}
             className="flex h-5 w-7 items-center justify-center rounded-md text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
             onClick={() => {
+              cancelRemoveHold();
               setPickerOpen(false);
               setRatingTagId(null);
+              setRemoveTagKey(null);
               onOpenDetailed();
             }}
             type="button"
@@ -222,10 +318,14 @@ export function SongQuickTagExperiment({
               );
               const ratingOpen =
                 ratingTagId === (keyword.tagId ?? keyword.name);
+              const removeOpen = removeTagKey === keywordKey;
+              const pillControlOpen = ratingOpen || removeOpen;
 
               return (
                 <motion.span
-                  className="group/tag relative inline-flex min-w-0"
+                  className={`relative inline-flex min-w-0 items-center ${
+                    pillControlOpen ? "" : "group/tag"
+                  }`}
                   key={keywordKey}
                   layout
                   layoutId={`quick-tag-${layoutGroupId}-${keywordKey}`}
@@ -238,50 +338,107 @@ export function SongQuickTagExperiment({
                   <button
                     aria-expanded={ratingOpen}
                     aria-label={`${keyword.name}, ${keyword.rating} out of ${TAG_MATCH_MAX} match. Change rating`}
-                    className={`relative inline-flex min-h-5 max-w-28 items-center justify-center rounded-full px-2 py-0.5 text-center text-xs font-semibold leading-none ${pillColors}`}
+                    className={`relative inline-flex min-h-5 max-w-[min(12rem,calc(100vw-3rem))] shrink-0 touch-manipulation items-center justify-center rounded-full px-2 py-0.5 text-center text-xs font-semibold leading-none ${pillColors}`}
+                    data-tag-rating-trigger
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      revealRemoveButton(keywordKey);
+                    }}
                     onClick={() => {
+                      if (longPressTriggeredRef.current) {
+                        longPressTriggeredRef.current = false;
+                        return;
+                      }
                       setPickerOpen(false);
+                      setRemoveTagKey(null);
                       setRatingTagId((current) =>
                         current === keywordKey ? null : keywordKey
                       );
                     }}
+                    onKeyDown={(event) => {
+                      if (
+                        event.key === "Delete" ||
+                        event.key === "Backspace"
+                      ) {
+                        event.preventDefault();
+                        revealRemoveButton(keywordKey);
+                      }
+                    }}
+                    onPointerCancel={cancelRemoveHold}
+                    onPointerDown={(event) => {
+                      if (event.button !== 0) {
+                        return;
+                      }
+                      cancelRemoveHold();
+                      longPressTriggeredRef.current = false;
+                      setHoldingTagKey(keywordKey);
+                      holdTimerRef.current = window.setTimeout(() => {
+                        longPressTriggeredRef.current = true;
+                        holdTimerRef.current = null;
+                        setHoldingTagKey(null);
+                        revealRemoveButton(keywordKey);
+                      }, 550);
+                    }}
+                    onPointerLeave={cancelRemoveHold}
+                    onPointerUp={cancelRemoveHold}
                     type="button"
                   >
-                    <ExpandableTagName
-                      expandedClassName={pillColors}
-                      name={keyword.name}
-                    />
-                    {!ratingOpen ? (
+                    <ExpandableTagName expandInPlace name={keyword.name} />
+                    {!pillControlOpen ? (
                       <span className="theme-tooltip pointer-events-none absolute bottom-[calc(100%+0.3rem)] left-1/2 z-[70] hidden h-6 -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-md px-2 text-[9px] leading-none shadow-lg group-hover/tag:flex group-focus-within/tag:flex">
                         {keyword.rating}/{TAG_MATCH_MAX}
                       </span>
                     ) : null}
                   </button>
 
+                  {removeOpen ? (
+                    <motion.button
+                      animate={{ opacity: 1, scale: 1 }}
+                      aria-label={`Remove ${keyword.name}`}
+                      className="theme-destructive absolute left-[calc(100%+0.25rem)] top-0 flex h-5 w-5 items-center justify-center rounded-md border border-[var(--theme-destructive)] bg-[var(--theme-destructive-soft)] shadow-md transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-destructive)]"
+                      data-tag-remove-control
+                      initial={{ opacity: 0, scale: 0.7 }}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        removeTag(keyword);
+                      }}
+                      type="button"
+                    >
+                      <X aria-hidden="true" className="h-3 w-3" />
+                    </motion.button>
+                  ) : null}
+
                   {ratingOpen ? (
                     <div
                       aria-label={`${keyword.name} match rating`}
-                      className="absolute left-1/2 top-[calc(100%+0.3rem)] z-[80] flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap"
+                      className="theme-menu absolute left-1/2 top-[calc(100%+0.3rem)] z-[80] w-[4.25rem] -translate-x-1/2 overflow-hidden rounded-xl p-1 text-left backdrop-blur-xl"
                       onClick={(event) => event.stopPropagation()}
+                      onDragStart={(event) => event.preventDefault()}
+                      ref={ratingMenuRef}
                       role="group"
                     >
-                      <input
-                        aria-label={`Set ${keyword.name} match rating`}
-                        className="h-5 w-24 cursor-pointer accent-[var(--accent)]"
-                        max={TAG_MATCH_MAX}
-                        min={TAG_MATCH_MIN}
-                        onInput={(event) =>
-                          updateRating(
-                            keyword,
-                            Number(event.currentTarget.value)
-                          )
-                        }
-                        type="range"
-                        value={keyword.rating}
-                      />
-                      <output className="text-xs font-semibold text-accent-strong">
-                        {keyword.rating}/{TAG_MATCH_MAX}
-                      </output>
+                      {Array.from(
+                        { length: TAG_MATCH_MAX - TAG_MATCH_MIN + 1 },
+                        (_, index) => index + TAG_MATCH_MIN
+                      ).map((value) => (
+                        <button
+                          aria-label={`${value} out of ${TAG_MATCH_MAX}`}
+                          aria-pressed={keyword.rating === value}
+                          className={`h-8 w-full rounded-lg border px-1.5 text-xs font-semibold transition ${
+                            keyword.rating === value
+                              ? "border-[var(--accent)] bg-accent-soft text-accent-strong"
+                              : "border-transparent text-zinc-300 hover:bg-white/5 hover:text-white"
+                          }`}
+                          key={value}
+                          onClick={() => {
+                            updateRating(keyword, value);
+                            setRatingTagId(null);
+                          }}
+                          type="button"
+                        >
+                          {value}
+                        </button>
+                      ))}
                     </div>
                   ) : null}
                 </motion.span>
@@ -293,9 +450,8 @@ export function SongQuickTagExperiment({
         {pickerOpen ? (
           <div
             aria-label="Available quick tags"
-            className={`absolute bottom-[calc(100%+0.35rem)] z-[80] flex w-[min(16rem,calc(100vw-3rem))] flex-wrap gap-1.5 ${
-              compact ? "right-0" : "left-0"
-            }`}
+            className="theme-control absolute bottom-[calc(100%+0.35rem)] left-3.5 z-[80] flex w-max max-w-[min(16rem,calc(100vw-3rem))] -translate-x-1/2 flex-wrap gap-1.5 rounded-lg p-1.5 shadow-lg backdrop-blur-md"
+            ref={pickerRef}
           >
             {availableTags.map((tag) => (
               <motion.button
@@ -304,6 +460,7 @@ export function SongQuickTagExperiment({
                   tag.color,
                   false
                 )}`}
+                data-quick-tag-choice
                 key={tag.id}
                 layout
                 layoutId={`quick-tag-${layoutGroupId}-${tag.id}`}
@@ -315,10 +472,7 @@ export function SongQuickTagExperiment({
                 }}
                 type="button"
               >
-                <ExpandableTagName
-                  expandedClassName={getTagPillClasses(tag.color, false)}
-                  name={tag.name}
-                />
+                <ExpandableTagName name={tag.name} />
               </motion.button>
             ))}
           </div>
@@ -331,24 +485,17 @@ export function SongQuickTagExperiment({
 }
 
 function ExpandableTagName({
-  expandedClassName,
+  expandInPlace = false,
   name
 }: {
-  expandedClassName: string;
+  expandInPlace?: boolean;
   name: string;
 }) {
-  const truncated = name.length > TAG_PILL_VISIBLE_LENGTH;
-
-  return (
-    <>
-      <span className="truncate">{formatTagPill(name)}</span>
-      {truncated ? (
-        <span
-          className={`pointer-events-none absolute left-0 top-1/2 z-[60] hidden min-h-5 w-max -translate-y-1/2 items-center justify-center whitespace-nowrap rounded-full px-2 py-0.5 text-center leading-none shadow-md group-hover/tag:inline-flex group-focus-within/tag:inline-flex ${expandedClassName}`}
-        >
-          {name}
-        </span>
-      ) : null}
-    </>
+  return expandInPlace ? (
+    <span className="block max-w-[8ch] overflow-hidden text-ellipsis whitespace-nowrap transition-[max-width] duration-200 ease-out group-hover/tag:max-w-48 group-focus-within/tag:max-w-48">
+      {name}
+    </span>
+  ) : (
+    <span className="truncate">{formatTagPill(name)}</span>
   );
 }

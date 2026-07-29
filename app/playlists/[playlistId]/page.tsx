@@ -21,7 +21,6 @@ import {
   Repeat2,
   SlidersHorizontal,
   Square,
-  Star,
   Tags,
   Trash2,
   X
@@ -31,6 +30,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   type FormEvent,
+  useCallback,
   useEffect,
   useId,
   useMemo,
@@ -38,6 +38,7 @@ import {
   useState
 } from "react";
 import { usePlayer } from "@/context/PlayerContext";
+import { SegmentedStarRating } from "@/components/SegmentedStarRating";
 import { SongQuickTagExperiment } from "@/components/SongQuickTagExperiment";
 import {
   formatTagPill,
@@ -94,6 +95,9 @@ export default function PlaylistDetailPage() {
     kind: InlineEditorKind;
     videoId: string;
   } | null>(null);
+  const [activeTagControlVideoId, setActiveTagControlVideoId] = useState<
+    string | null
+  >(null);
   const [transfer, setTransfer] = useState<{
     ids: string[];
     mode: TransferMode;
@@ -128,6 +132,14 @@ export default function PlaylistDetailPage() {
         left.localeCompare(right, undefined, { sensitivity: "base" })
       ),
     [playlist, songMetadata]
+  );
+  const handleTagFloatingStateChange = useCallback(
+    (videoId: string, active: boolean) => {
+      setActiveTagControlVideoId((current) =>
+        active ? videoId : current === videoId ? null : current
+      );
+    },
+    []
   );
 
   useEffect(() => {
@@ -586,7 +598,7 @@ export default function PlaylistDetailPage() {
                 className={`relative flex items-center gap-3 border-b border-zinc-200 p-3 transition last:border-b-0 dark:border-white/10 2xl:grid 2xl:grid-cols-[minmax(0,1fr)_5rem_5rem_8rem_2.5rem] 2xl:gap-x-2 ${
                   isSelected ? "bg-accent-subtle" : "hover:bg-zinc-50/80 dark:hover:bg-white/[0.025]"
                 }`}
-                draggable={!sort}
+                draggable={!sort && !activeTagControlVideoId}
                 key={video.id}
                 onDragEnd={() => setDragIndex(null)}
                 onDragOver={(event) => event.preventDefault()}
@@ -606,7 +618,7 @@ export default function PlaylistDetailPage() {
                 <span
                   aria-label={`Drag to reorder ${video.title}`}
                   className={`hidden h-10 w-5 shrink-0 items-center justify-center text-zinc-400 sm:flex ${
-                    sort
+                    sort || activeTagControlVideoId
                       ? "cursor-default opacity-35"
                       : "cursor-grab active:cursor-grabbing"
                   }`}
@@ -656,20 +668,36 @@ export default function PlaylistDetailPage() {
                       ariaLabel={`Set play frequency for ${video.title}`}
                       controlKey={`${video.id}:frequency`}
                       editor={editorKind === "frequency" ? editor : null}
-                      icon={Repeat2}
-                      label={`${video.playFrequency ?? 1}x`}
+                      icon={
+                        (video.playFrequency ?? 1) === 1 ? Repeat2 : undefined
+                      }
+                      label={
+                        (video.playFrequency ?? 1) === 1
+                          ? null
+                          : `${video.playFrequency}x`
+                      }
                       labelInside
                       onClick={() =>
                         toggleInlineEditor(video.id, "frequency")
                       }
                     />
                     <CompactSongControl
-                      active={Boolean(metadata.rating)}
-                      ariaLabel={`Rate ${video.title}`}
+                      ariaLabel={`Rate ${video.title}: ${metadata.rating ?? 0} out of 5`}
                       controlKey={`${video.id}:rating`}
                       editor={editorKind === "rating" ? editor : null}
-                      icon={Star}
-                      label={metadata.rating ? `${metadata.rating}/5` : null}
+                      iconNode={
+                        <SegmentedStarRating
+                          className="h-4 w-4 shrink-0"
+                          onSelect={(rating) =>
+                            updateSongMetadata(video.id, {
+                              ...metadata,
+                              rating
+                            })
+                          }
+                          rating={metadata.rating}
+                        />
+                      }
+                      label={null}
                       labelInside
                       onClick={() => toggleInlineEditor(video.id, "rating")}
                     />
@@ -680,10 +708,12 @@ export default function PlaylistDetailPage() {
                         editorKind === "tags" ? editor : undefined
                       }
                       keywords={metadata.keywords}
+                      interactionId={video.id}
                       onOpenDetailed={() =>
                         toggleInlineEditor(video.id, "tags")
                       }
                       onOpenQuick={() => setInlineEditor(null)}
+                      onFloatingStateChange={handleTagFloatingStateChange}
                       onSaveTags={(keywords) =>
                         updateSongMetadata(video.id, {
                           ...metadata,
@@ -699,47 +729,47 @@ export default function PlaylistDetailPage() {
                 </div>
                 <div className="hidden 2xl:contents">
                   <div
-                    className="relative flex w-full items-center"
+                    className="relative flex w-full items-center justify-center"
                     data-song-editor-root={`${video.id}:frequency`}
                   >
                     <button
                       aria-label={`Set play frequency for ${video.title}`}
-                      className="inline-flex h-8 min-w-[4.25rem] items-center gap-1.5 rounded-lg px-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
                       onClick={() =>
                         toggleInlineEditor(video.id, "frequency")
                       }
                       type="button"
                     >
-                      <Repeat2 aria-hidden="true" className="h-4 w-4" />
-                      <span className="text-sm font-medium">
-                        {video.playFrequency ?? 1}x
-                      </span>
+                      {(video.playFrequency ?? 1) === 1 ? (
+                        <Repeat2 aria-hidden="true" className="h-4 w-4" />
+                      ) : (
+                        <span className="text-sm font-medium">
+                          {video.playFrequency}x
+                        </span>
+                      )}
                     </button>
                     {editorKind === "frequency" ? editor : null}
                   </div>
                   <div
-                    className="relative flex w-full items-center"
+                    className="relative flex w-full items-center justify-center"
                     data-song-editor-root={`${video.id}:rating`}
                   >
                     <button
-                      aria-label={`Rate ${video.title}`}
-                      className="inline-flex h-8 min-w-[4.25rem] items-center gap-1.5 rounded-lg px-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
+                      aria-label={`Rate ${video.title}: ${metadata.rating ?? 0} out of 5`}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
                       onClick={() => toggleInlineEditor(video.id, "rating")}
                       type="button"
                     >
-                      <Star
-                        aria-hidden="true"
-                        className={`h-4 w-4 ${
-                          metadata.rating
-                            ? "fill-[var(--accent)] text-[var(--accent)]"
-                            : ""
-                        }`}
+                      <SegmentedStarRating
+                        className="h-[1.125rem] w-[1.125rem] shrink-0"
+                        onSelect={(rating) =>
+                          updateSongMetadata(video.id, {
+                            ...metadata,
+                            rating
+                          })
+                        }
+                        rating={metadata.rating}
                       />
-                      {metadata.rating ? (
-                        <span className="text-sm font-medium">
-                          {metadata.rating}/5
-                        </span>
-                      ) : null}
                     </button>
                     {editorKind === "rating" ? editor : null}
                   </div>
@@ -749,10 +779,12 @@ export default function PlaylistDetailPage() {
                       editorKind === "tags" ? editor : undefined
                     }
                     keywords={metadata.keywords}
+                    interactionId={video.id}
                     onOpenDetailed={() =>
                       toggleInlineEditor(video.id, "tags")
                     }
                     onOpenQuick={() => setInlineEditor(null)}
+                    onFloatingStateChange={handleTagFloatingStateChange}
                     onSaveTags={(keywords) =>
                       updateSongMetadata(video.id, {
                         ...metadata,
@@ -1159,6 +1191,7 @@ function CompactSongControl({
   controlKey,
   editor,
   icon: Icon,
+  iconNode,
   label,
   labelInside = false,
   onClick
@@ -1167,7 +1200,8 @@ function CompactSongControl({
   ariaLabel: string;
   controlKey: string;
   editor?: React.ReactNode;
-  icon: typeof Star;
+  icon?: typeof Repeat2;
+  iconNode?: React.ReactNode;
   label: React.ReactNode;
   labelInside?: boolean;
   onClick: () => void;
@@ -1179,9 +1213,7 @@ function CompactSongControl({
     >
       <button
         aria-label={ariaLabel}
-        className={`inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-md px-1.5 text-[10px] font-medium transition hover:bg-zinc-100 hover:text-accent-strong dark:hover:bg-white/5 ${
-          labelInside ? "min-w-7" : "w-7"
-        } ${
+        className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-1.5 text-[10px] font-medium transition hover:bg-zinc-100 hover:text-accent-strong dark:hover:bg-white/5 ${
           active
             ? "text-accent-strong"
             : "text-zinc-500 dark:text-zinc-400"
@@ -1189,7 +1221,10 @@ function CompactSongControl({
         onClick={onClick}
         type="button"
       >
-        <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+        {iconNode ??
+          (Icon ? (
+            <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+          ) : null)}
         {labelInside ? label : null}
       </button>
       {!labelInside ? (
