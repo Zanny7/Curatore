@@ -3,6 +3,7 @@ import type {
   TagColor,
   TagDefinition
 } from "@/types";
+import { createClientId } from "@/lib/id";
 
 export const TAG_MAX_LENGTH = 12;
 export const TAG_PILL_VISIBLE_LENGTH = 6;
@@ -152,5 +153,5 @@ export function migrateTagLibrary(
 }
 
 export function createTagId() {
-  return `tag-${crypto.randomUUID()}`;
+  return createClientId("tag");
 }

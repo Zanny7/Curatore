@@ -82,6 +82,7 @@ export type PlayerState = {
   selectedPlaylist: Playlist | null;
   queue: VideoItem[];
   currentIndex: number;
+  playbackRevision: number;
   isPlaying: boolean;
   shuffle: boolean;
   repeat: boolean;

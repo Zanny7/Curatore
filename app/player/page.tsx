@@ -3,10 +3,23 @@
 import { Disc3, Radio } from "lucide-react";
 import type { ReactNode } from "react";
 import { MarqueeText } from "@/components/MarqueeText";
+import { PlayerSongControls } from "@/components/PlayerSongControls";
 import { usePlayer } from "@/context/PlayerContext";
 
 export default function PlayerPage() {
-  const { currentVideo, isPlaying, queue, selectedPlaylist } = usePlayer();
+  const {
+    currentVideo,
+    isPlaying,
+    queue,
+    selectedPlaylist,
+    setPlaylistVideoFrequency,
+    songMetadata,
+    tagDefinitions,
+    updateSongMetadata
+  } = usePlayer();
+  const metadata = currentVideo
+    ? (songMetadata[currentVideo.id] ?? { keywords: [] })
+    : null;
 
   return (
     <section className="mx-auto w-full max-w-5xl space-y-8">
@@ -18,6 +31,27 @@ export default function PlayerPage() {
             trigger={currentVideo ? "auto" : "static"}
           />
         </h1>
+        {currentVideo && metadata ? (
+          <PlayerSongControls
+            frequency={currentVideo.playFrequency ?? 1}
+            metadata={metadata}
+            onSaveFrequency={(frequency) => {
+              if (selectedPlaylist) {
+                setPlaylistVideoFrequency(
+                  selectedPlaylist.id,
+                  [currentVideo.id],
+                  frequency
+                );
+              }
+            }}
+            onSaveMetadata={(nextMetadata) =>
+              updateSongMetadata(currentVideo.id, nextMetadata)
+            }
+            playlistId={selectedPlaylist?.id}
+            song={currentVideo}
+            tagDefinitions={tagDefinitions}
+          />
+        ) : null}
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="grid w-full gap-3 sm:grid-cols-2 lg:max-w-2xl">
             <InfoCard

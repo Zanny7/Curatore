@@ -4,24 +4,29 @@ import { useEffect, useRef, useState } from "react";
 
 type MarqueeTextProps = {
   isPlaying?: boolean;
+  resetKey?: number | string;
   text: string;
   trigger?: "auto" | "hover" | "static";
 };
 
 export function MarqueeText({
   isPlaying = false,
+  resetKey,
   text,
   trigger = "auto"
 }: MarqueeTextProps) {
   const [running, setRunning] = useState(false);
   const [isOverflowing, setIsOverflowing] = useState(false);
+  const [hasAutoStarted, setHasAutoStarted] = useState(false);
   const containerRef = useRef<HTMLSpanElement | null>(null);
   const textRef = useRef<HTMLSpanElement | null>(null);
   const delayRef = useRef<number | null>(null);
   const animationRef = useRef<number | null>(null);
   const isHoverTrigger = trigger === "hover";
   const shouldAutoScroll =
-    trigger === "auto" && isPlaying && isOverflowing;
+    trigger === "auto" &&
+    isOverflowing &&
+    (isPlaying || hasAutoStarted);
   const triggerClass =
     trigger === "hover"
       ? "marquee-text-hover"
@@ -43,7 +48,20 @@ export function MarqueeText({
 
   useEffect(() => {
     setRunning(false);
-  }, [text]);
+    setIsOverflowing(false);
+    setHasAutoStarted(false);
+    clearDelay();
+    if (animationRef.current) {
+      window.clearTimeout(animationRef.current);
+      animationRef.current = null;
+    }
+  }, [resetKey, text]);
+
+  useEffect(() => {
+    if (trigger === "auto" && isPlaying && isOverflowing) {
+      setHasAutoStarted(true);
+    }
+  }, [isOverflowing, isPlaying, trigger]);
 
   useEffect(() => {
     const measureOverflow = () => {
@@ -64,7 +82,7 @@ export function MarqueeText({
     }
 
     return () => observer.disconnect();
-  }, [text]);
+  }, [resetKey, text]);
 
   function clearDelay() {
     if (!delayRef.current) {
@@ -100,7 +118,7 @@ export function MarqueeText({
       aria-label={text}
       className={`marquee-text ${triggerClass} ${
         running ? "marquee-text-running" : ""
-      }`}
+      } ${shouldAutoScroll && !isPlaying ? "marquee-text-paused" : ""}`}
       ref={containerRef}
       onPointerEnter={handlePointerEnter}
       onPointerLeave={handlePointerLeave}
@@ -113,6 +131,7 @@ export function MarqueeText({
         className={`marquee-track ${
           running ? "marquee-track-running" : ""
         }`}
+        key={`${text}-${resetKey ?? ""}`}
       >
         <span ref={textRef}>{text}</span>
         {isHoverTrigger ? <span>{text}</span> : null}

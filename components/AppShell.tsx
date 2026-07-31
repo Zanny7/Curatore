@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode, TouchEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CuratoreCubeLogo } from "@/components/CuratoreCubeLogo";
 import { GlobalPlayerControls } from "@/components/GlobalPlayerControls";
 import { LeftSidebar } from "@/components/LeftSidebar";
 import { RightQueueSidebar } from "@/components/RightQueueSidebar";
@@ -163,13 +164,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           <Menu aria-hidden="true" className="h-6 w-6" />
         </button>
-        <Link
-          aria-label="Curatore player"
-          className="text-xl font-bold tracking-tight text-white"
-          href="/player"
-        >
-          Curatore
-        </Link>
+        <div className="flex items-center gap-1.5">
+          <Link
+            aria-label="Curatore player"
+            className="text-xl font-bold tracking-tight text-white"
+            href="/player"
+          >
+            Curatore
+          </Link>
+          <CuratoreCubeLogo size="compact" />
+        </div>
         <button
           aria-controls="queue-sidebar"
           aria-expanded={mobilePanel === "queue"}

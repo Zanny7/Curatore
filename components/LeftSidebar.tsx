@@ -5,20 +5,21 @@ import { usePathname } from "next/navigation";
 import {
   ChevronLeft,
   ChevronRight,
-  CircleHelp,
   Heart,
   History,
+  Info,
   Library,
   ListMusic,
-  PlayCircle,
+  Play,
   Settings,
   Tags,
   X
 } from "lucide-react";
+import { CuratoreCubeLogo } from "@/components/CuratoreCubeLogo";
 import { UserSection } from "@/components/UserSection";
 
 const navItems = [
-  { href: "/player", label: "Player", icon: PlayCircle },
+  { href: "/player", label: "Player", icon: Play },
   { href: "/playlists", label: "Playlists", icon: ListMusic },
   { href: "/tags", label: "Tags", icon: Tags },
   { href: "/settings", label: "Settings", icon: Settings }
@@ -31,7 +32,7 @@ const upcomingItems = [
 ];
 
 const resourceItems = [
-  { href: "/help", label: "Help Center", icon: CircleHelp }
+  { href: "/help", label: "Help Center", icon: Info }
 ];
 
 type LeftSidebarProps = {
@@ -77,13 +78,16 @@ export function LeftSidebar({
 
         <div className="hidden items-start justify-between px-6 py-7 lg:flex">
           <div>
-            <Link
-              aria-label="Curatore player"
-              className="text-3xl font-bold tracking-tight text-white transition hover:text-accent-strong active:text-accent-strong"
-              href="/player"
-            >
-              Curatore
-            </Link>
+            <div className="flex items-center gap-14">
+              <Link
+                aria-label="Curatore player"
+                className="text-3xl font-bold tracking-tight text-white transition hover:text-accent-strong active:text-accent-strong"
+                href="/player"
+              >
+                Curatore
+              </Link>
+              <CuratoreCubeLogo />
+            </div>
             <p className="mt-1 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
               Media Manager
             </p>

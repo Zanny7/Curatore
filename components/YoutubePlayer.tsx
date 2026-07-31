@@ -37,14 +37,22 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
   const iframeLoadedRef = useRef(false);
   const lastCommandRef = useRef<"pauseVideo" | "playVideo" | null>(null);
   const endReachedRef = useRef(false);
+  const playbackStartedRef = useRef(false);
   const readyTimeoutRef = useRef<number | null>(null);
   const commandTimeoutsRef = useRef<number[]>([]);
   const captionTimeoutsRef = useRef<number[]>([]);
   const captionsDisabledOnPlaybackRef = useRef(false);
   const trimEndTimeoutRef = useRef<number | null>(null);
   const lastTapRef = useRef<number | null>(null);
-  const { currentVideo, isPlaying, next, setPlayback, setPlayerReady, volume } =
-    usePlayer();
+  const {
+    advanceAfterNaturalEnd,
+    currentVideo,
+    isPlaying,
+    playbackRevision,
+    setPlayback,
+    setPlayerReady,
+    volume
+  } = usePlayer();
 
   const embedUrl = useMemo(() => {
     if (!currentVideo || typeof window === "undefined") {
@@ -147,6 +155,15 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
     [sendCommandWithRetry]
   );
 
+  const handleNaturalEnd = useCallback(() => {
+    if (endReachedRef.current || !playbackStartedRef.current) {
+      return;
+    }
+
+    endReachedRef.current = true;
+    advanceAfterNaturalEnd(playbackRevision);
+  }, [advanceAfterNaturalEnd, playbackRevision]);
+
   const handleIframeLoad = useCallback(() => {
     if (readyTimeoutRef.current) {
       window.clearTimeout(readyTimeoutRef.current);
@@ -188,6 +205,7 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
   useEffect(() => {
     lastCommandRef.current = null;
     endReachedRef.current = false;
+    playbackStartedRef.current = false;
     iframeLoadedRef.current = false;
     captionsDisabledOnPlaybackRef.current = false;
     setPlayerReady(false);
@@ -204,6 +222,7 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
     clearCommandRetries,
     clearTrimEndTimeout,
     currentVideo?.id,
+    playbackRevision,
     setPlayerReady
   ]);
 
@@ -234,12 +253,7 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
       (currentVideo.endSeconds - (currentVideo.startSeconds ?? 0)) * 1000;
 
     trimEndTimeoutRef.current = window.setTimeout(() => {
-      if (endReachedRef.current) {
-        return;
-      }
-
-      endReachedRef.current = true;
-      next();
+      handleNaturalEnd();
     }, trimDurationMs);
 
     return clearTrimEndTimeout;
@@ -248,8 +262,8 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
     currentVideo?.endSeconds,
     currentVideo?.id,
     currentVideo?.startSeconds,
+    handleNaturalEnd,
     isPlaying,
-    next
   ]);
 
   useEffect(() => {
@@ -274,7 +288,10 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
 
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
-      if (event.origin !== YOUTUBE_ORIGIN) {
+      if (
+        event.origin !== YOUTUBE_ORIGIN ||
+        event.source !== iframeRef.current?.contentWindow
+      ) {
         return;
       }
 
@@ -300,8 +317,7 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
           payload.info >= currentVideo.endSeconds &&
           !endReachedRef.current
         ) {
-          endReachedRef.current = true;
-          next();
+          handleNaturalEnd();
         }
 
         return;
@@ -317,11 +333,11 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
       };
 
       if (info.playerState === 0) {
-        endReachedRef.current = true;
-        next();
+        handleNaturalEnd();
       }
 
       if (info.playerState === 1) {
+        playbackStartedRef.current = true;
         if (!captionsDisabledOnPlaybackRef.current) {
           captionsDisabledOnPlaybackRef.current = true;
           disableCaptionsWithRetry();
@@ -340,8 +356,7 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
         info.currentTime >= currentVideo.endSeconds &&
         !endReachedRef.current
       ) {
-        endReachedRef.current = true;
-        next();
+        handleNaturalEnd();
       }
     }
 
@@ -352,7 +367,7 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
     currentVideo?.id,
     currentVideo?.startSeconds,
     disableCaptionsWithRetry,
-    next,
+    handleNaturalEnd,
     setPlayback
   ]);
 
@@ -410,6 +425,7 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
             className="pointer-events-none h-full w-full"
+            key={`${currentVideo?.id ?? "video"}-${playbackRevision}`}
             onLoad={handleIframeLoad}
             ref={iframeRef}
             src={embedUrl}

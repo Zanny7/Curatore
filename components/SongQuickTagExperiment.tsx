@@ -26,11 +26,13 @@ type SongQuickTagExperimentProps = {
   detailedEditor?: ReactNode;
   interactionId: string;
   keywords: SongMetadata["keywords"];
+  layout?: "player" | "playlist";
   onFloatingStateChange: (interactionId: string, active: boolean) => void;
-  onOpenDetailed: () => void;
+  onOpenDetailed?: () => void;
   onOpenQuick: () => void;
   onSaveTags: (keywords: SongMetadata["keywords"]) => void;
   selectedTag: string | null;
+  showDetailed?: boolean;
   songTitle: string;
   tagDefinitions: TagDefinition[];
 };
@@ -53,11 +55,13 @@ export function SongQuickTagExperiment({
   detailedEditor,
   interactionId,
   keywords,
+  layout = "playlist",
   onFloatingStateChange,
   onOpenDetailed,
   onOpenQuick,
   onSaveTags,
   selectedTag,
+  showDetailed = true,
   songTitle,
   tagDefinitions
 }: SongQuickTagExperimentProps) {
@@ -259,18 +263,30 @@ export function SongQuickTagExperiment({
     <LayoutGroup id={layoutGroupId}>
       <div
         className={
-          compact
-            ? "relative inline-flex min-w-0 shrink-0 items-center gap-0.5"
-            : "relative flex w-full items-center gap-1"
+          layout === "player"
+            ? "relative flex min-w-0 flex-1 flex-wrap items-center gap-2"
+            : compact
+              ? "relative inline-flex min-w-0 shrink-0 items-center gap-0.5"
+              : "relative flex w-full items-center gap-1"
         }
         data-song-editor-root={controlKey}
         ref={rootRef}
       >
-        <div className="flex shrink-0 flex-col items-center gap-0.5">
+        <div
+          className={
+            layout === "player"
+              ? "flex shrink-0 items-center"
+              : "flex shrink-0 flex-col items-center gap-0.5"
+          }
+        >
           <button
             aria-expanded={pickerOpen}
             aria-label={`Quickly assign a tag to ${songTitle}`}
-            className="relative flex h-5 w-7 items-center justify-center rounded-md text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong disabled:cursor-not-allowed disabled:opacity-30 dark:text-zinc-400 dark:hover:bg-white/5"
+            className={`relative flex items-center justify-center text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong disabled:cursor-not-allowed disabled:opacity-30 dark:text-zinc-400 dark:hover:bg-white/5 ${
+              layout === "player"
+                ? "h-8 w-8 rounded-lg"
+                : "h-5 w-7 rounded-md"
+            }`}
             disabled={quickTagDisabled}
             onClick={() => {
               cancelRemoveHold();
@@ -283,30 +299,43 @@ export function SongQuickTagExperiment({
             }}
             type="button"
           >
-            <Tag aria-hidden="true" className="h-3.5 w-3.5" />
+            <Tag
+              aria-hidden="true"
+              className={layout === "player" ? "h-4 w-4" : "h-3.5 w-3.5"}
+            />
             <Plus
               aria-hidden="true"
-              className="absolute right-0.5 top-0 h-2.5 w-2.5"
+              className={`absolute h-2.5 w-2.5 ${
+                layout === "player" ? "right-1 top-0.5" : "right-0.5 top-0"
+              }`}
             />
           </button>
-          <button
-            aria-label={`Edit tags for ${songTitle}`}
-            className="flex h-5 w-7 items-center justify-center rounded-md text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
-            onClick={() => {
-              cancelRemoveHold();
-              setPickerOpen(false);
-              setRatingTagId(null);
-              setRemoveTagKey(null);
-              onOpenDetailed();
-            }}
-            type="button"
-          >
-            <Tags aria-hidden="true" className="h-3.5 w-3.5" />
-          </button>
+          {showDetailed ? (
+            <button
+              aria-label={`Edit tags for ${songTitle}`}
+              className="flex h-5 w-7 items-center justify-center rounded-md text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
+              onClick={() => {
+                cancelRemoveHold();
+                setPickerOpen(false);
+                setRatingTagId(null);
+                setRemoveTagKey(null);
+                onOpenDetailed?.();
+              }}
+              type="button"
+            >
+              <Tags aria-hidden="true" className="h-3.5 w-3.5" />
+            </button>
+          ) : null}
         </div>
 
         {sortedKeywords.length > 0 ? (
-          <span className="inline-flex min-w-0 flex-col items-stretch gap-1">
+          <span
+            className={`inline-flex min-w-0 gap-1 ${
+              layout === "player"
+                ? "flex-row flex-wrap items-center"
+                : "flex-col items-stretch"
+            }`}
+          >
             {sortedKeywords.map((keyword) => {
               const keywordKey = keyword.tagId ?? keyword.name;
               const highlighted =

@@ -39,6 +39,7 @@ import {
 } from "react";
 import { usePlayer } from "@/context/PlayerContext";
 import { SegmentedStarRating } from "@/components/SegmentedStarRating";
+import { SongControlButton } from "@/components/SongControlButton";
 import { SongQuickTagExperiment } from "@/components/SongQuickTagExperiment";
 import {
   formatTagPill,
@@ -732,13 +733,11 @@ export default function PlaylistDetailPage() {
                     className="relative flex w-full items-center justify-center"
                     data-song-editor-root={`${video.id}:frequency`}
                   >
-                    <button
+                    <SongControlButton
                       aria-label={`Set play frequency for ${video.title}`}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
                       onClick={() =>
                         toggleInlineEditor(video.id, "frequency")
                       }
-                      type="button"
                     >
                       {(video.playFrequency ?? 1) === 1 ? (
                         <Repeat2 aria-hidden="true" className="h-4 w-4" />
@@ -747,18 +746,16 @@ export default function PlaylistDetailPage() {
                           {video.playFrequency}x
                         </span>
                       )}
-                    </button>
+                    </SongControlButton>
                     {editorKind === "frequency" ? editor : null}
                   </div>
                   <div
                     className="relative flex w-full items-center justify-center"
                     data-song-editor-root={`${video.id}:rating`}
                   >
-                    <button
+                    <SongControlButton
                       aria-label={`Rate ${video.title}: ${metadata.rating ?? 0} out of 5`}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-accent-strong dark:text-zinc-400 dark:hover:bg-white/5"
                       onClick={() => toggleInlineEditor(video.id, "rating")}
-                      type="button"
                     >
                       <SegmentedStarRating
                         className="h-[1.125rem] w-[1.125rem] shrink-0"
@@ -770,7 +767,7 @@ export default function PlaylistDetailPage() {
                         }
                         rating={metadata.rating}
                       />
-                    </button>
+                    </SongControlButton>
                     {editorKind === "rating" ? editor : null}
                   </div>
                   <SongQuickTagExperiment
@@ -800,18 +797,17 @@ export default function PlaylistDetailPage() {
                   className="relative shrink-0 2xl:justify-self-center"
                   data-song-menu-root={video.id}
                 >
-                  <button
+                  <SongControlButton
                     aria-label={`More actions for ${video.title}`}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white"
                     onClick={() =>
                       setOpenMenuId((current) =>
                         current === video.id ? null : video.id
                       )
                     }
-                    type="button"
+                    tone="neutral"
                   >
                     <MoreHorizontal aria-hidden="true" className="h-5 w-5" />
-                  </button>
+                  </SongControlButton>
                   {openMenuId === video.id ? (
                     <SongMenu
                       onClose={() => setOpenMenuId(null)}
@@ -1211,22 +1207,17 @@ function CompactSongControl({
       className="relative inline-flex min-w-0 shrink-0 items-center gap-0.5"
       data-song-editor-root={controlKey}
     >
-      <button
+      <SongControlButton
         aria-label={ariaLabel}
-        className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-1.5 text-[10px] font-medium transition hover:bg-zinc-100 hover:text-accent-strong dark:hover:bg-white/5 ${
-          active
-            ? "text-accent-strong"
-            : "text-zinc-500 dark:text-zinc-400"
-        }`}
+        active={active}
         onClick={onClick}
-        type="button"
       >
         {iconNode ??
           (Icon ? (
             <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
           ) : null)}
         {labelInside ? label : null}
-      </button>
+      </SongControlButton>
       {!labelInside ? (
         <span className="min-w-0 text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
           {label}

@@ -25,6 +25,7 @@ import {
   normalizeTagName,
   normalizeTagRating
 } from "@/lib/tags";
+import { createClientId } from "@/lib/id";
 import type {
   PlayerState,
   Playlist,
@@ -98,7 +99,11 @@ type PlayerContextValue = PlayerState & {
   togglePlayback: () => void;
   setPlayback: (playing: boolean) => void;
   next: () => void;
+  advanceAfterNaturalEnd: (playbackRevision: number) => void;
   previous: () => void;
+  playQueueItem: (queueIndex: number) => void;
+  removeQueueItem: (queueIndex: number) => void;
+  reorderQueueItem: (fromQueueIndex: number, toQueueIndex: number) => void;
   toggleShuffle: () => void;
   toggleRepeat: () => void;
   setVolume: (volume: number) => void;
@@ -119,6 +124,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     selectedPlaylist: null,
     queue: [],
     currentIndex: 0,
+    playbackRevision: 0,
     isPlaying: false,
     shuffle: false,
     repeat: false,
@@ -168,7 +174,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     (name: string, videos: VideoItem[] = []) => {
       const createdAt = new Date().toISOString();
       const playlist: Playlist = {
-        id: `curated-${crypto.randomUUID()}`,
+        id: createClientId("curated"),
         name: name.trim(),
         thumbnailUrl:
           videos[0]?.thumbnailUrl ??
@@ -246,6 +252,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             selectedPlaylist: null,
             queue: [],
             currentIndex: 0,
+            playbackRevision: current.playbackRevision + 1,
             isPlaying: false
           }
         : current
@@ -329,6 +336,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       selectedPlaylist: playlist,
       queue: buildWeightedQueue(playlist.videos, current.shuffle, videoId),
       currentIndex: 0,
+      playbackRevision: current.playbackRevision + 1,
       isPlaying: false
     }));
   }, []);
@@ -841,36 +849,57 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setState((current) => ({ ...current, isPlaying: !current.isPlaying }));
   }, []);
 
-  const next = useCallback(() => {
-    setState((current) => {
-      if (current.queue.length === 0) {
-        return current;
-      }
+  const advanceQueue = useCallback(
+    (expectedPlaybackRevision?: number) => {
+      setState((current) => {
+        if (
+          current.queue.length === 0 ||
+          (expectedPlaybackRevision !== undefined &&
+            (current.playbackRevision !== expectedPlaybackRevision ||
+              !current.isPlaying))
+        ) {
+          return current;
+        }
 
-      const isAtEnd = current.currentIndex >= current.queue.length - 1;
-      if (isAtEnd && !current.repeat) {
-        return { ...current, isPlaying: false };
-      }
+        const isAtEnd = current.currentIndex >= current.queue.length - 1;
+        if (isAtEnd && !current.repeat) {
+          return { ...current, isPlaying: false };
+        }
 
-      if (isAtEnd && current.repeat && current.selectedPlaylist) {
+        if (isAtEnd && current.repeat && current.selectedPlaylist) {
+          return {
+            ...current,
+            queue: buildWeightedQueue(
+              current.selectedPlaylist.videos,
+              current.shuffle
+            ),
+            currentIndex: 0,
+            playbackRevision: current.playbackRevision + 1,
+            isPlaying: true
+          };
+        }
+
         return {
           ...current,
-          queue: buildWeightedQueue(
-            current.selectedPlaylist.videos,
-            current.shuffle
-          ),
-          currentIndex: 0,
+          currentIndex: current.currentIndex + 1,
+          playbackRevision: current.playbackRevision + 1,
           isPlaying: true
         };
-      }
+      });
+    },
+    []
+  );
 
-      return {
-        ...current,
-        currentIndex: current.currentIndex + 1,
-        isPlaying: true
-      };
-    });
-  }, []);
+  const next = useCallback(() => {
+    advanceQueue();
+  }, [advanceQueue]);
+
+  const advanceAfterNaturalEnd = useCallback(
+    (expectedPlaybackRevision: number) => {
+      advanceQueue(expectedPlaybackRevision);
+    },
+    [advanceQueue]
+  );
 
   const previous = useCallback(() => {
     setState((current) => {
@@ -884,10 +913,66 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           current.currentIndex === 0
             ? current.queue.length - 1
             : current.currentIndex - 1,
+        playbackRevision: current.playbackRevision + 1,
         isPlaying: true
       };
     });
   }, []);
+
+  const playQueueItem = useCallback((queueIndex: number) => {
+    setState((current) => {
+      if (
+        queueIndex <= current.currentIndex ||
+        queueIndex >= current.queue.length
+      ) {
+        return current;
+      }
+
+      return {
+        ...current,
+        currentIndex: queueIndex,
+        playbackRevision: current.playbackRevision + 1,
+        isPlaying: true
+      };
+    });
+  }, []);
+
+  const removeQueueItem = useCallback((queueIndex: number) => {
+    setState((current) => {
+      if (
+        queueIndex <= current.currentIndex ||
+        queueIndex >= current.queue.length
+      ) {
+        return current;
+      }
+
+      const queue = [...current.queue];
+      queue.splice(queueIndex, 1);
+      return { ...current, queue };
+    });
+  }, []);
+
+  const reorderQueueItem = useCallback(
+    (fromQueueIndex: number, toQueueIndex: number) => {
+      setState((current) => {
+        if (
+          fromQueueIndex <= current.currentIndex ||
+          toQueueIndex <= current.currentIndex ||
+          fromQueueIndex >= current.queue.length ||
+          toQueueIndex >= current.queue.length ||
+          fromQueueIndex === toQueueIndex
+        ) {
+          return current;
+        }
+
+        const queue = [...current.queue];
+        const [moved] = queue.splice(fromQueueIndex, 1);
+        queue.splice(toQueueIndex, 0, moved);
+        return { ...current, queue };
+      });
+    },
+    []
+  );
 
   const toggleShuffle = useCallback(() => {
     setState((current) => {
@@ -958,7 +1043,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       togglePlayback,
       setPlayback,
       next,
+      advanceAfterNaturalEnd,
       previous,
+      playQueueItem,
+      removeQueueItem,
+      reorderQueueItem,
       toggleShuffle,
       toggleRepeat,
       setVolume
@@ -995,7 +1084,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       togglePlayback,
       setPlayback,
       next,
+      advanceAfterNaturalEnd,
       previous,
+      playQueueItem,
+      removeQueueItem,
+      reorderQueueItem,
       toggleShuffle,
       toggleRepeat,
       setVolume
