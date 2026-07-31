@@ -576,23 +576,23 @@ html[data-curatore-theme] [class~="bg-black/75"] {
 }
 
 .curatore-cube-button {
-  --curatore-cube-expansion: 0.3rem;
+  --curatore-cube-expansion: 0.33rem;
   --curatore-cube-face-offset: calc(var(--curatore-cube-size) / 2);
-  --curatore-cube-size: 1.3rem;
+  --curatore-cube-size: 1.69rem;
   align-items: center;
   display: inline-flex;
   flex: 0 0 auto;
-  height: 2.5rem;
+  height: 2.75rem;
   justify-content: center;
   perspective: 9rem;
-  width: 2.5rem;
+  width: 2.75rem;
 }
 
 .curatore-cube-button-compact {
-  --curatore-cube-expansion: 0.24rem;
-  --curatore-cube-size: 1rem;
-  height: 2rem;
-  width: 2rem;
+  --curatore-cube-expansion: 0.26rem;
+  --curatore-cube-size: 1.3rem;
+  height: 2.25rem;
+  width: 2.25rem;
 }
 
 .curatore-cube-button:focus-visible {

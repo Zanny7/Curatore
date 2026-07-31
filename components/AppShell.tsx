@@ -3,7 +3,11 @@
 import { ListMusic, Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode, TouchEvent } from "react";
+import type {
+  MouseEvent as ReactMouseEvent,
+  ReactNode,
+  TouchEvent
+} from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CuratoreCubeLogo } from "@/components/CuratoreCubeLogo";
 import { GlobalPlayerControls } from "@/components/GlobalPlayerControls";
@@ -15,6 +19,14 @@ import {
   readStoredBackground,
   readStoredTheme
 } from "@/lib/storage";
+
+function isSidebarToggleBackground(target: EventTarget | null) {
+  return (
+    target instanceof Element &&
+    Boolean(target.closest("[data-sidebar-toggle-background]")) &&
+    !target.closest("[data-sidebar-toggle-content]")
+  );
+}
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -142,9 +154,41 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }
 
+  function handleMouseDownCapture(
+    event: ReactMouseEvent<HTMLDivElement>
+  ) {
+    if (event.button !== 0 || event.detail < 2) {
+      return;
+    }
+
+    const target = event.target;
+    if (
+      !(target instanceof Element) ||
+      target.closest(
+        'input, textarea, [contenteditable]:not([contenteditable="false"]), [role="textbox"]'
+      )
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    window.getSelection()?.removeAllRanges();
+
+    if (
+      event.detail === 2 &&
+      window.matchMedia("(min-width: 1024px)").matches &&
+      isSidebarToggleBackground(target)
+    ) {
+      const hideBoth = leftOpen || rightOpen;
+      setLeftOpen(!hideBoth);
+      setRightOpen(!hideBoth);
+    }
+  }
+
   return (
     <div
       className="min-h-screen bg-[var(--theme-background)] bg-cover bg-center bg-fixed text-[var(--theme-text)]"
+      onMouseDownCapture={handleMouseDownCapture}
       onTouchEnd={handleTouchEnd}
       onTouchStart={handleTouchStart}
       style={{ backgroundImage: "var(--app-background-image)" }}
@@ -210,8 +254,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         open={rightOpen}
       />
 
-      <main className={`min-h-screen px-4 pb-36 transition-all duration-300 sm:px-6 ${mainTopPadding} ${mainClass}`}>
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+      <main
+        className={`min-h-screen px-4 pb-36 transition-all duration-300 sm:px-6 ${mainTopPadding} ${mainClass}`}
+        data-sidebar-toggle-background
+      >
+        <div
+          className="mx-auto flex w-full max-w-6xl flex-col gap-8"
+          data-sidebar-toggle-content
+        >
           <YoutubePlayer visible={isPlayerRoute} />
           {children}
         </div>

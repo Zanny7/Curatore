@@ -76,17 +76,19 @@ export function LeftSidebar({
           <p className="text-xl font-semibold text-white">Navigation</p>
         </div>
 
-        <div className="hidden items-start justify-between px-6 py-7 lg:flex">
+        <div className="hidden px-6 py-7 lg:block">
           <div>
-            <div className="flex items-center gap-14">
+            <div className="flex w-[calc(100%+1.5rem+1px)] items-center">
               <Link
                 aria-label="Curatore player"
-                className="text-3xl font-bold tracking-tight text-white transition hover:text-accent-strong active:text-accent-strong"
+                className="shrink-0 text-3xl font-bold tracking-tight text-white transition hover:text-accent-strong active:text-accent-strong"
                 href="/player"
               >
                 Curatore
               </Link>
-              <CuratoreCubeLogo />
+              <div className="flex flex-1 justify-center">
+                <CuratoreCubeLogo />
+              </div>
             </div>
             <p className="mt-1 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
               Media Manager

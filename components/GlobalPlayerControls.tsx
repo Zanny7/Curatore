@@ -113,6 +113,7 @@ export function GlobalPlayerControls({ leftOpen, rightOpen }: GlobalPlayerContro
       >
         <div
           className="pointer-events-auto mx-auto flex h-28 w-full max-w-5xl items-end justify-center"
+          data-sidebar-toggle-background
           onBlur={handleControlsBlur}
           onFocusCapture={() => setControlsOpen(true)}
           onMouseEnter={() => setControlsOpen(true)}
@@ -122,6 +123,7 @@ export function GlobalPlayerControls({ leftOpen, rightOpen }: GlobalPlayerContro
             animate={{ y: controlsOpen ? "0%" : "84%" }}
             aria-label="Global playback controls"
             className="theme-control pointer-events-auto relative rounded-t-2xl border-b-0 p-3 shadow-soft-dark backdrop-blur"
+            data-sidebar-toggle-content
             initial={false}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           >
