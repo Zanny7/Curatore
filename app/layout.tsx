@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import { AppShell } from "@/components/AppShell";
 import { PlayerProvider } from "@/context/PlayerContext";
+import { GestureProvider } from "@/context/GestureContext";
 import {
   createThemeBootstrapScript,
   createThemeStyleSheet
@@ -42,7 +43,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         className={`${inter.variable} bg-[var(--theme-background)] font-sans text-[var(--theme-text)] antialiased`}
       >
         <PlayerProvider>
-          <AppShell>{children}</AppShell>
+          <GestureProvider>
+            <AppShell>{children}</AppShell>
+          </GestureProvider>
         </PlayerProvider>
       </body>
     </html>

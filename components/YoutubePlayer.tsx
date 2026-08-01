@@ -23,12 +23,6 @@ type YoutubeCommand =
   | "setVolume"
   | "unloadModule";
 
-declare global {
-  interface Window {
-    __curatoreYoutubeControl?: (playing: boolean) => void;
-  }
-}
-
 const YOUTUBE_ORIGIN = "https://www.youtube.com";
 
 export function YoutubePlayer({ visible }: YoutubePlayerProps) {
@@ -193,14 +187,6 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
     syncPlayback,
     volume
   ]);
-
-  useEffect(() => {
-    window.__curatoreYoutubeControl = syncPlayback;
-
-    return () => {
-      delete window.__curatoreYoutubeControl;
-    };
-  }, [syncPlayback]);
 
   useEffect(() => {
     lastCommandRef.current = null;

@@ -8,12 +8,14 @@ import type {
   ReactNode,
   TouchEvent
 } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CuratoreCubeLogo } from "@/components/CuratoreCubeLogo";
 import { GlobalPlayerControls } from "@/components/GlobalPlayerControls";
+import { GestureStatusIndicator } from "@/components/GestureStatusIndicator";
 import { LeftSidebar } from "@/components/LeftSidebar";
 import { RightQueueSidebar } from "@/components/RightQueueSidebar";
 import { YoutubePlayer } from "@/components/YoutubePlayer";
+import { useCuratoreGestures } from "@/context/GestureContext";
 import { applyAppearance } from "@/lib/background";
 import {
   readStoredBackground,
@@ -30,6 +32,7 @@ function isSidebarToggleBackground(target: EventTarget | null) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { registerSidebarToggle } = useCuratoreGestures();
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const [mobilePanel, setMobilePanel] = useState<"navigation" | "queue" | null>(
@@ -37,6 +40,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const isPlayerRoute = pathname === "/player";
+
+  const toggleBothSidebars = useCallback((): "shown" | "hidden" => {
+    const hideBoth = leftOpen || rightOpen;
+    setLeftOpen(!hideBoth);
+    setRightOpen(!hideBoth);
+    return hideBoth ? "hidden" : "shown";
+  }, [leftOpen, rightOpen]);
+
+  useEffect(() => {
+    registerSidebarToggle(toggleBothSidebars);
+    return () => registerSidebarToggle(null);
+  }, [registerSidebarToggle, toggleBothSidebars]);
 
   useEffect(() => {
     const storedTheme = readStoredTheme() ?? "dark";
@@ -179,9 +194,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       window.matchMedia("(min-width: 1024px)").matches &&
       isSidebarToggleBackground(target)
     ) {
-      const hideBoth = leftOpen || rightOpen;
-      setLeftOpen(!hideBoth);
-      setRightOpen(!hideBoth);
+      toggleBothSidebars();
     }
   }
 
@@ -262,12 +275,26 @@ export function AppShell({ children }: { children: ReactNode }) {
           className="mx-auto flex w-full max-w-6xl flex-col gap-8"
           data-sidebar-toggle-content
         >
-          <YoutubePlayer visible={isPlayerRoute} />
+          <div className={isPlayerRoute ? "relative" : "contents"}>
+            {isPlayerRoute ? (
+              <div
+                className="absolute -top-4 left-1/2 z-20 flex -translate-x-1/2 items-center justify-center whitespace-nowrap lg:-top-10"
+                data-gesture-player-status
+              >
+                <GestureStatusIndicator />
+              </div>
+            ) : null}
+            <YoutubePlayer visible={isPlayerRoute} />
+          </div>
           {children}
         </div>
       </main>
 
-      <GlobalPlayerControls leftOpen={leftOpen} rightOpen={rightOpen} />
+      <GlobalPlayerControls
+        isPlayerRoute={isPlayerRoute}
+        leftOpen={leftOpen}
+        rightOpen={rightOpen}
+      />
     </div>
   );
 }

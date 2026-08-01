@@ -11,13 +11,19 @@ import {
 import { motion } from "framer-motion";
 import { useMemo, useState, type FocusEvent, type ReactNode } from "react";
 import { usePlayer } from "@/context/PlayerContext";
+import { GestureStatusIndicator } from "@/components/GestureStatusIndicator";
 
 type GlobalPlayerControlsProps = {
+  isPlayerRoute: boolean;
   leftOpen: boolean;
   rightOpen: boolean;
 };
 
-export function GlobalPlayerControls({ leftOpen, rightOpen }: GlobalPlayerControlsProps) {
+export function GlobalPlayerControls({
+  isPlayerRoute,
+  leftOpen,
+  rightOpen
+}: GlobalPlayerControlsProps) {
   const [controlsOpen, setControlsOpen] = useState(false);
   const {
     currentVideo,
@@ -43,7 +49,6 @@ export function GlobalPlayerControls({ leftOpen, rightOpen }: GlobalPlayerContro
       return;
     }
 
-    window.__curatoreYoutubeControl?.(!isPlaying);
     togglePlayback();
   }
 
@@ -59,6 +64,12 @@ export function GlobalPlayerControls({ leftOpen, rightOpen }: GlobalPlayerContro
         aria-label="Global playback controls"
         className="theme-control fixed inset-x-0 bottom-0 z-30 border-x-0 border-b-0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 shadow-soft-dark backdrop-blur lg:hidden"
       >
+        {!isPlayerRoute ? (
+          <GestureStatusIndicator
+            className="absolute left-4 top-1/2 -translate-y-1/2"
+            variant="global"
+          />
+        ) : null}
         <div className="mx-auto flex max-w-md items-center justify-center gap-1">
           <ControlButton
             active={shuffle}
@@ -127,6 +138,12 @@ export function GlobalPlayerControls({ leftOpen, rightOpen }: GlobalPlayerContro
             initial={false}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           >
+            {!isPlayerRoute ? (
+              <GestureStatusIndicator
+                className="absolute right-2 top-2"
+                variant="global"
+              />
+            ) : null}
             <div
               aria-hidden="true"
               className="absolute left-1/2 top-0 h-1 w-12 -translate-x-1/2 rounded-full bg-zinc-500/70"

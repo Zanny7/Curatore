@@ -31,6 +31,8 @@
   --theme-destructive: #f87171;
   --theme-destructive-hover: #fca5a5;
   --theme-destructive-soft: rgba(239, 68, 68, 0.16);
+  --gesture-active: #34d399;
+  --gesture-inactive: #facc15;
   --accent: var(--theme-accent);
   --accent-soft: var(--theme-accent-soft);
   --accent-subtle: var(--theme-accent-subtle);

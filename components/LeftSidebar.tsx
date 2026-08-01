@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -17,6 +18,8 @@ import {
 } from "lucide-react";
 import { CuratoreCubeLogo } from "@/components/CuratoreCubeLogo";
 import { UserSection } from "@/components/UserSection";
+import { useCuratoreGestures } from "@/context/GestureContext";
+import { GESTURE_DIAGNOSTICS_ENABLED } from "@/lib/gestures/diagnostics";
 
 const navItems = [
   { href: "/player", label: "Player", icon: Play },
@@ -134,6 +137,9 @@ export function LeftSidebar({
               })}
             </nav>
 
+            <CameraGesturePreview />
+            <GestureDiagnosticsPanel />
+
             <div className="border-t border-[var(--app-sidebar-border)] pt-4 lg:px-3 lg:py-4">
               <p className="pb-2 text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-400 lg:px-4 lg:text-left lg:text-xs">
                 Coming Soon<span className="text-sm">™</span>
@@ -211,4 +217,138 @@ export function LeftSidebar({
       ) : null}
     </>
   );
+}
+
+function CameraGesturePreview() {
+  const { previewEnabled, previewStream } = useCuratoreGestures();
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) {
+      return;
+    }
+
+    if (!previewEnabled || !previewStream) {
+      video.pause();
+      video.srcObject = null;
+      return;
+    }
+
+    video.srcObject = previewStream;
+    void video.play().catch(() => undefined);
+    return () => {
+      video.pause();
+      video.srcObject = null;
+    };
+  }, [previewEnabled, previewStream]);
+
+  if (!previewEnabled || !previewStream) {
+    return null;
+  }
+
+  return (
+    <section
+      aria-label="Webcam gesture preview"
+      className="mx-4 mb-4 mt-3 shrink-0 lg:mx-3"
+    >
+      <div className="mb-1.5 flex items-center justify-between px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+        <span>Camera preview</span>
+        <span>Development</span>
+      </div>
+      <div className="overflow-hidden rounded-xl border border-[var(--app-sidebar-border)] bg-black shadow-sm">
+        <video
+          aria-label="Mirrored webcam feed used for gesture recognition"
+          autoPlay
+          className="aspect-video w-full object-cover [transform:scaleX(-1)]"
+          muted
+          playsInline
+          ref={videoRef}
+        />
+      </div>
+    </section>
+  );
+}
+
+function GestureDiagnosticsPanel() {
+  const { diagnostics, requested } = useCuratoreGestures();
+  if (!GESTURE_DIAGNOSTICS_ENABLED || !requested || !diagnostics) {
+    return null;
+  }
+
+  const { fingerExtensions, rawScores, smoothedScores } = diagnostics;
+  const format = (value: number | null, digits = 2) =>
+    value === null ? "—" : value.toFixed(digits);
+
+  return (
+    <section
+      aria-label="Gesture recognition diagnostics"
+      className="mx-4 mb-4 shrink-0 rounded-xl border border-amber-400/30 bg-black/40 p-3 font-mono text-[10px] leading-4 text-zinc-300 lg:mx-3"
+    >
+      <div className="mb-2 flex items-center justify-between font-sans font-semibold uppercase tracking-[0.14em] text-amber-300">
+        <span>Gesture diagnostics</span>
+        <span>Dev</span>
+      </div>
+
+      <div className="grid grid-cols-[minmax(0,1fr)_3rem_3rem] gap-x-2 border-b border-white/10 pb-1 text-zinc-500">
+        <span>Gesture</span>
+        <span className="text-right">Raw</span>
+        <span className="text-right">Smooth</span>
+      </div>
+      {(
+        [
+          ["Open palm", rawScores.openPalm, smoothedScores.openPalm],
+          ["Closed fist", rawScores.closedFist, smoothedScores.closedFist],
+          ["Pointing", rawScores.pointingUp, smoothedScores.pointingUp],
+          ["Victory", rawScores.victory, smoothedScores.victory]
+        ] as const
+      ).map(([label, raw, smoothed]) => (
+        <div
+          className="grid grid-cols-[minmax(0,1fr)_3rem_3rem] gap-x-2"
+          key={label}
+        >
+          <span>{label}</span>
+          <span className="text-right">{format(raw)}</span>
+          <span className="text-right">{format(smoothed)}</span>
+        </div>
+      ))}
+
+      <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] gap-x-2 border-t border-white/10 pt-2">
+        <span>Pinch ratio</span>
+        <span>{format(diagnostics.pinchRatio, 3)}</span>
+        <span>Hand size</span>
+        <span>{format(diagnostics.handSize, 3)}</span>
+        <span>Recognition FPS</span>
+        <span>{format(diagnostics.recognitionFps, 1)}</span>
+        <span>Candidate</span>
+        <span>{diagnostics.candidate ?? "—"}</span>
+        <span>Hold progress</span>
+        <span>{Math.round(diagnostics.holdProgress * 100)}%</span>
+        <span>Positive / missed</span>
+        <span>
+          {diagnostics.positiveSamples} / {diagnostics.missedSamples}
+        </span>
+      </div>
+
+      <div className="mt-2 border-t border-white/10 pt-2">
+        <p className="text-zinc-500">Extended fingers</p>
+        <p>
+          T:{flag(fingerExtensions.thumb)} I:{flag(fingerExtensions.index)} M:
+          {flag(fingerExtensions.middle)} R:{flag(fingerExtensions.ring)} P:
+          {flag(fingerExtensions.pinky)}
+        </p>
+      </div>
+
+      <div className="mt-2 border-t border-white/10 pt-2">
+        <p className="text-zinc-500">Last cancellation</p>
+        <p className="break-words">
+          {diagnostics.lastCancellationReason ?? "—"}
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function flag(value: boolean) {
+  return value ? "Y" : "N";
 }
