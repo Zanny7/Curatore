@@ -326,7 +326,11 @@ export default function PlaylistDetailPage() {
   }
 
   async function refreshPlaylist() {
-    if (!playlist?.url || playlist.source !== "imported") {
+    if (
+      !playlist?.url ||
+      playlist.origin !== "imported" ||
+      playlist.source !== "youtube"
+    ) {
       return;
     }
 
@@ -402,9 +406,9 @@ export default function PlaylistDetailPage() {
             </button>
             <div className="min-w-0">
               <p className="text-accent text-xs font-semibold uppercase tracking-[0.18em]">
-                {playlist.source === "imported"
-                  ? "Imported playlist"
-                  : "My playlist"}
+                {playlist.origin === "imported" ? "Imported" : "My playlist"}
+                {" · "}
+                {playlist.source === "local" ? "Local music" : "YouTube"}
               </p>
               <h1 className="mt-2 line-clamp-2 text-3xl font-bold tracking-tight text-zinc-950 dark:text-white sm:text-4xl">
                 {playlist.name}
@@ -416,7 +420,7 @@ export default function PlaylistDetailPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {playlist.source === "imported" ? (
+            {playlist.origin === "imported" && playlist.source === "youtube" ? (
               <button
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-zinc-200 px-4 text-sm font-semibold text-zinc-600 transition hover:border-accent hover:text-accent-strong disabled:opacity-40 dark:border-white/10 dark:text-zinc-300"
                 disabled={refreshing}
@@ -451,13 +455,22 @@ export default function PlaylistDetailPage() {
         <div className="theme-panel mt-5 flex flex-wrap gap-x-5 gap-y-2 rounded-xl px-4 py-3 text-xs text-zinc-500 dark:text-zinc-400">
           <span className="inline-flex items-center gap-2">
             <CalendarClock aria-hidden="true" className="h-4 w-4" />
-            {playlist.source === "imported"
+            {playlist.origin === "imported" && playlist.source === "youtube"
               ? `Last refreshed ${formatDate(playlist.lastRefreshedAt)}`
-              : `Created ${formatDate(playlist.createdAt)}`}
+              : playlist.origin === "imported"
+                ? `Imported ${formatDate(playlist.createdAt)}`
+                : `Created ${formatDate(playlist.createdAt)}`}
           </span>
-          {playlist.source === "imported" ? (
+          {playlist.origin === "imported" && playlist.source === "youtube" ? (
             <span>
               {(playlist.excludedVideoIds ?? []).length} locally excluded
+            </span>
+          ) : null}
+          {playlist.source === "local" ? (
+            <span>
+              {playlist.storagePersistence === "persistent"
+                ? "Persistent browser storage granted"
+                : "Browser-managed local storage"}
             </span>
           ) : null}
           <span>
@@ -884,11 +897,11 @@ export default function PlaylistDetailPage() {
         <TransferDialog
           count={transfer.ids.length}
           destinations={curatedPlaylists.filter(
-            (item) => item.id !== playlist.id
+            (item) => item.id !== playlist.id && item.source === playlist.source
           )}
           mode={transfer.mode}
           onClose={() => setTransfer(null)}
-          onCreate={(name) => createCuratedPlaylist(name)}
+          onCreate={(name) => createCuratedPlaylist(name, [], playlist.source)}
           onSubmit={(destinationId) => {
             if (transfer.mode === "copy") {
               copyPlaylistVideos(playlist.id, destinationId, transfer.ids);
@@ -925,7 +938,7 @@ export default function PlaylistDetailPage() {
           name={playlist.name}
           onCancel={() => setShowDelete(false)}
           onConfirm={() => {
-            deletePlaylist(playlist.id);
+            void deletePlaylist(playlist.id);
             router.push("/playlists");
           }}
         />

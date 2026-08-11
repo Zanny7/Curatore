@@ -26,6 +26,13 @@ import {
   normalizeTagRating
 } from "@/lib/tags";
 import { createClientId } from "@/lib/id";
+import { deleteUnreferencedLocalFiles } from "@/lib/localMusicStorage";
+import { localMusicThumbnail } from "@/lib/playlists";
+import {
+  applyPlayerCommand,
+  buildWeightedQueue,
+  normalizeFrequency
+} from "@/lib/playerQueue";
 import type {
   PlayerState,
   Playlist,
@@ -46,9 +53,13 @@ type PlayerContextValue = PlayerState & {
   playerReady: boolean;
   playlistsLoaded: boolean;
   addImportedPlaylist: (playlist: Playlist) => void;
-  createCuratedPlaylist: (name: string, videos?: VideoItem[]) => Playlist;
+  createCuratedPlaylist: (
+    name: string,
+    videos?: VideoItem[],
+    source?: Playlist["source"]
+  ) => Playlist;
   renamePlaylist: (playlistId: string, name: string) => void;
-  deletePlaylist: (playlistId: string) => void;
+  deletePlaylist: (playlistId: string) => Promise<void>;
   refreshImportedPlaylist: (
     playlistId: string,
     refreshedPlaylist: Playlist
@@ -171,16 +182,23 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const createCuratedPlaylist = useCallback(
-    (name: string, videos: VideoItem[] = []) => {
+    (
+      name: string,
+      videos: VideoItem[] = [],
+      source = videos[0]?.source ?? "youtube"
+    ) => {
       const createdAt = new Date().toISOString();
       const playlist: Playlist = {
         id: createClientId("curated"),
         name: name.trim(),
         thumbnailUrl:
           videos[0]?.thumbnailUrl ??
-          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='360'%3E%3Crect width='100%25' height='100%25' fill='%2318181b'/%3E%3Cpath d='M210 120h220v120H210z' rx='16' fill='%2327272a'/%3E%3Cpath d='M280 150l90 30-90 30z' fill='%23d4d4d8'/%3E%3C/svg%3E",
+          (source === "local"
+            ? localMusicThumbnail
+            : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='360'%3E%3Crect width='100%25' height='100%25' fill='%2318181b'/%3E%3Cpath d='M210 120h220v120H210z' rx='16' fill='%2327272a'/%3E%3Cpath d='M280 150l90 30-90 30z' fill='%23d4d4d8'/%3E%3C/svg%3E"),
         videoCount: videos.length,
-        source: "curated",
+        source,
+        origin: "curated",
         videos: videos.map((video) => ({
           ...video,
           addedAt: video.addedAt ?? createdAt,
@@ -234,7 +252,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const deletePlaylist = useCallback((playlistId: string) => {
+  const deletePlaylist = useCallback(async (playlistId: string) => {
+    const all = [...importedPlaylists, ...curatedPlaylists];
+    const deleted = all.find((playlist) => playlist.id === playlistId);
+    const remaining = all.filter((playlist) => playlist.id !== playlistId);
     setImportedPlaylists((current) => {
       const next = current.filter((playlist) => playlist.id !== playlistId);
       writeStoredPlaylists(next);
@@ -257,7 +278,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           }
         : current
     );
-  }, []);
+    if (deleted?.source === "local") {
+      await deleteUnreferencedLocalFiles(deleted, remaining);
+    }
+  }, [curatedPlaylists, importedPlaylists]);
 
   const refreshImportedPlaylist = useCallback(
     (playlistId: string, refreshedPlaylist: Playlist) => {
@@ -356,7 +380,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             videoCount: videos.length,
             videos,
             excludedVideoIds:
-              playlist.source === "imported"
+              playlist.origin === "imported" && playlist.source === "youtube"
                 ? Array.from(
                     new Set([...(playlist.excludedVideoIds ?? []), ...videoIds])
                   )
@@ -399,7 +423,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             videoCount: videos.length,
             videos,
             excludedVideoIds:
-              current.selectedPlaylist.source === "imported"
+              current.selectedPlaylist.origin === "imported" &&
+                current.selectedPlaylist.source === "youtube"
                 ? Array.from(
                     new Set([
                       ...(current.selectedPlaylist.excludedVideoIds ?? []),
@@ -592,7 +617,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const source = [...importedPlaylists, ...curatedPlaylists].find(
         (playlist) => playlist.id === sourcePlaylistId
       );
-      if (!source) {
+      const destination = curatedPlaylists.find(
+        (playlist) => playlist.id === destinationPlaylistId
+      );
+      if (!source || !destination || source.source !== destination.source) {
         return;
       }
 
@@ -846,46 +874,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const togglePlayback = useCallback(() => {
-    setState((current) => ({ ...current, isPlaying: !current.isPlaying }));
+    setState((current) => applyPlayerCommand(current, { type: "toggle-playback" }));
   }, []);
 
   const advanceQueue = useCallback(
     (expectedPlaybackRevision?: number) => {
-      setState((current) => {
-        if (
-          current.queue.length === 0 ||
-          (expectedPlaybackRevision !== undefined &&
-            (current.playbackRevision !== expectedPlaybackRevision ||
-              !current.isPlaying))
-        ) {
-          return current;
-        }
-
-        const isAtEnd = current.currentIndex >= current.queue.length - 1;
-        if (isAtEnd && !current.repeat) {
-          return { ...current, isPlaying: false };
-        }
-
-        if (isAtEnd && current.repeat && current.selectedPlaylist) {
-          return {
-            ...current,
-            queue: buildWeightedQueue(
-              current.selectedPlaylist.videos,
-              current.shuffle
-            ),
-            currentIndex: 0,
-            playbackRevision: current.playbackRevision + 1,
-            isPlaying: true
-          };
-        }
-
-        return {
-          ...current,
-          currentIndex: current.currentIndex + 1,
-          playbackRevision: current.playbackRevision + 1,
-          isPlaying: true
-        };
-      });
+      setState((current) =>
+        applyPlayerCommand(current, {
+          type: "advance",
+          expectedPlaybackRevision
+        })
+      );
     },
     []
   );
@@ -902,21 +901,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   );
 
   const previous = useCallback(() => {
-    setState((current) => {
-      if (current.queue.length === 0) {
-        return current;
-      }
-
-      return {
-        ...current,
-        currentIndex:
-          current.currentIndex === 0
-            ? current.queue.length - 1
-            : current.currentIndex - 1,
-        playbackRevision: current.playbackRevision + 1,
-        isPlaying: true
-      };
-    });
+    setState((current) => applyPlayerCommand(current, { type: "previous" }));
   }, []);
 
   const playQueueItem = useCallback((queueIndex: number) => {
@@ -975,26 +960,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   );
 
   const toggleShuffle = useCallback(() => {
-    setState((current) => {
-      const shuffle = !current.shuffle;
-      if (!current.selectedPlaylist) {
-        return { ...current, shuffle };
-      }
-      return {
-        ...current,
-        shuffle,
-        queue: buildWeightedQueue(
-          current.selectedPlaylist.videos,
-          shuffle,
-          current.queue[current.currentIndex]?.id
-        ),
-        currentIndex: 0
-      };
-    });
+    setState((current) => applyPlayerCommand(current, { type: "toggle-shuffle" }));
   }, []);
 
   const toggleRepeat = useCallback(() => {
-    setState((current) => ({ ...current, repeat: !current.repeat }));
+    setState((current) => applyPlayerCommand(current, { type: "toggle-repeat" }));
   }, []);
 
   const setVolume = useCallback((volume: number) => {
@@ -1106,61 +1076,4 @@ export function usePlayer() {
   }
 
   return context;
-}
-
-function normalizeFrequency(value?: number) {
-  return Math.min(5, Math.max(1, Math.round(value ?? 1)));
-}
-
-function buildWeightedQueue(
-  videos: VideoItem[],
-  shuffle: boolean,
-  firstVideoId?: string
-) {
-  const queue: VideoItem[] = [];
-
-  for (let pass = 1; pass <= 5; pass += 1) {
-    for (const video of videos) {
-      if (normalizeFrequency(video.playFrequency) >= pass) {
-        queue.push(video);
-      }
-    }
-  }
-
-  const ordered = shuffle ? shuffleWithoutAdjacentDuplicates(queue) : queue;
-  if (!firstVideoId) {
-    return ordered;
-  }
-
-  const requestedIndex = ordered.findIndex(
-    (video) => video.id === firstVideoId
-  );
-  if (requestedIndex <= 0) {
-    return ordered;
-  }
-
-  const next = [...ordered];
-  const [requested] = next.splice(requestedIndex, 1);
-  next.unshift(requested);
-  return next;
-}
-
-function shuffleWithoutAdjacentDuplicates(videos: VideoItem[]) {
-  const remaining = [...videos];
-  const shuffled: VideoItem[] = [];
-
-  while (remaining.length > 0) {
-    const previousId = shuffled.at(-1)?.id;
-    const candidates = remaining
-      .map((video, index) => ({ video, index }))
-      .filter(({ video }) => video.id !== previousId);
-    const pool = candidates.length > 0 ? candidates : remaining.map(
-      (video, index) => ({ video, index })
-    );
-    const choice = pool[Math.floor(Math.random() * pool.length)];
-    shuffled.push(choice.video);
-    remaining.splice(choice.index, 1);
-  }
-
-  return shuffled;
 }

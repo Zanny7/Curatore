@@ -7,6 +7,7 @@ import type {
   ThemePreference
 } from "@/types";
 import { BACKGROUND_THEME_IDS } from "@/lib/background";
+import { migratePlaylists } from "@/lib/playlists";
 
 const IMPORTED_PLAYLISTS_KEY = "curatore.importedPlaylists";
 const CURATED_PLAYLISTS_KEY = "curatore.curatedPlaylists";
@@ -49,7 +50,9 @@ export function readStoredPlaylists(): Playlist[] {
       IMPORTED_PLAYLISTS_KEY,
       LEGACY_IMPORTED_PLAYLISTS_KEY
     );
-    return value ? (JSON.parse(value) as Playlist[]) : [];
+    const playlists = migratePlaylists(value ? JSON.parse(value) : [], "imported");
+    writeStoredPlaylists(playlists);
+    return playlists;
   } catch {
     return [];
   }
@@ -60,7 +63,14 @@ export function writeStoredPlaylists(playlists: Playlist[]) {
     return;
   }
 
-  window.localStorage.setItem(IMPORTED_PLAYLISTS_KEY, JSON.stringify(playlists));
+  try {
+    window.localStorage.setItem(
+      IMPORTED_PLAYLISTS_KEY,
+      JSON.stringify(playlists)
+    );
+  } catch {
+    // Keep the in-memory collection if browser metadata storage is unavailable.
+  }
 }
 
 export function readStoredCuratedPlaylists(): Playlist[] {
@@ -70,7 +80,9 @@ export function readStoredCuratedPlaylists(): Playlist[] {
 
   try {
     const value = window.localStorage.getItem(CURATED_PLAYLISTS_KEY);
-    return value ? (JSON.parse(value) as Playlist[]) : [];
+    const playlists = migratePlaylists(value ? JSON.parse(value) : [], "curated");
+    writeStoredCuratedPlaylists(playlists);
+    return playlists;
   } catch {
     return [];
   }
@@ -81,7 +93,14 @@ export function writeStoredCuratedPlaylists(playlists: Playlist[]) {
     return;
   }
 
-  window.localStorage.setItem(CURATED_PLAYLISTS_KEY, JSON.stringify(playlists));
+  try {
+    window.localStorage.setItem(
+      CURATED_PLAYLISTS_KEY,
+      JSON.stringify(playlists)
+    );
+  } catch {
+    // Keep the in-memory collection if browser metadata storage is unavailable.
+  }
 }
 
 export function readStoredSongMetadata(): Record<string, SongMetadata> {

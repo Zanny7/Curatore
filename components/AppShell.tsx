@@ -14,7 +14,7 @@ import { GlobalPlayerControls } from "@/components/GlobalPlayerControls";
 import { GestureStatusIndicator } from "@/components/GestureStatusIndicator";
 import { LeftSidebar } from "@/components/LeftSidebar";
 import { RightQueueSidebar } from "@/components/RightQueueSidebar";
-import { YoutubePlayer } from "@/components/YoutubePlayer";
+import { MediaPlayer } from "@/components/MediaPlayer";
 import { useCuratoreGestures } from "@/context/GestureContext";
 import { applyAppearance } from "@/lib/background";
 import {
@@ -284,7 +284,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <GestureStatusIndicator />
               </div>
             ) : null}
-            <YoutubePlayer visible={isPlayerRoute} />
+            <MediaPlayer visible={isPlayerRoute} />
           </div>
           {children}
         </div>

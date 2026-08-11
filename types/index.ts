@@ -25,12 +25,20 @@ export type VideoItem = {
   title: string;
   channelTitle: string;
   thumbnailUrl: string;
+  source?: PlaylistSource;
+  storagePath?: string;
+  mimeType?: string;
+  fileSize?: number;
+  originalFileName?: string;
   duration?: string;
   startSeconds?: number;
   endSeconds?: number;
   addedAt?: string;
   playFrequency?: number;
 };
+
+export type PlaylistSource = "youtube" | "local";
+export type PlaylistOrigin = "curated" | "imported";
 
 export type TagColor =
   | "theme"
@@ -66,11 +74,13 @@ export type Playlist = {
   url?: string;
   thumbnailUrl: string;
   videoCount: number;
-  source: "curated" | "imported";
+  source: PlaylistSource;
+  origin: PlaylistOrigin;
   videos: VideoItem[];
   createdAt?: string;
   lastRefreshedAt?: string;
   excludedVideoIds?: string[];
+  storagePersistence?: "persistent" | "best-effort";
 };
 
 export type RemovedPlaylistVideo = {

@@ -1,13 +1,19 @@
 "use client";
 
-import { type FormEvent, useEffect, useState } from "react";
+import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FolderPlus, Import, ListMusic, Plus, X } from "lucide-react";
+import { FileAudio, FolderPlus, Import, ListMusic, Plus, X, Youtube } from "lucide-react";
 import { PlaylistCard } from "@/components/PlaylistCard";
 import { usePlayer } from "@/context/PlayerContext";
 import type { Playlist } from "@/types";
+import {
+  importLocalMusicPlaylist,
+  validateLocalAudioFiles
+} from "@/lib/localMusicStorage";
+import { groupPlaylistsBySource } from "@/lib/playlists";
 
 type PlaylistView = "curated" | "imported";
+type ImportMode = "choose" | "youtube" | "local";
 
 export default function PlaylistsPage() {
   const router = useRouter();
@@ -21,12 +27,15 @@ export default function PlaylistsPage() {
   } = usePlayer();
   const [view, setView] = useState<PlaylistView>("curated");
   const [showImport, setShowImport] = useState(false);
+  const [importMode, setImportMode] = useState<ImportMode>("choose");
   const [showCreate, setShowCreate] = useState(false);
   const [playlistName, setPlaylistName] = useState("");
   const [importName, setImportName] = useState("");
   const [url, setUrl] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [localFiles, setLocalFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (
@@ -112,6 +121,46 @@ export default function PlaylistsPage() {
     }
   }
 
+  function selectLocalFiles(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []);
+    setStatus(null);
+    try {
+      validateLocalAudioFiles(files);
+      setLocalFiles(files);
+      if (!importName.trim()) {
+        setImportName(files[0]?.name.replace(/\.[^.]+$/, "") ?? "Local music");
+      }
+    } catch (error) {
+      setLocalFiles([]);
+      setStatus(error instanceof Error ? error.message : "Unable to use those files.");
+    }
+  }
+
+  async function importLocalPlaylist(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setStatus(null);
+    setSubmitting(true);
+    try {
+      const playlist = await importLocalMusicPlaylist(importName, localFiles);
+      addImportedPlaylist(playlist);
+      setImportName("");
+      setLocalFiles([]);
+      setImportMode("choose");
+      setShowImport(false);
+      setStatus("Local music imported successfully.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Unable to import local music.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function openImportChooser() {
+    setStatus(null);
+    setImportMode("choose");
+    setShowImport(true);
+  }
+
   return (
     <section className="space-y-6">
       <div className="flex flex-col gap-5">
@@ -141,7 +190,7 @@ export default function PlaylistsPage() {
             <p className="mt-3 max-w-2xl text-zinc-600 dark:text-zinc-300">
               {view === "curated"
                 ? "Shape your own collections from the music you have imported."
-                : "Your editable local snapshots of YouTube playlists."}
+                : "YouTube snapshots and music files stored privately in this browser."}
             </p>
           </div>
           <button
@@ -149,7 +198,9 @@ export default function PlaylistsPage() {
             onClick={() =>
               view === "curated"
                 ? setShowCreate(true)
-                : setShowImport((current) => !current)
+                : showImport
+                  ? setShowImport(false)
+                  : openImportChooser()
             }
             type="button"
           >
@@ -163,7 +214,29 @@ export default function PlaylistsPage() {
         </div>
       </div>
 
-      {view === "imported" && showImport ? (
+      {view === "imported" && showImport && importMode === "choose" ? (
+        <div className="theme-card rounded-xl p-5 shadow-lg backdrop-blur">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-zinc-950 dark:text-white">Import playlist</h2>
+              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Choose where the music comes from.</p>
+            </div>
+            <button aria-label="Close import choices" className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 hover:text-accent-strong" onClick={() => setShowImport(false)} type="button"><X className="h-5 w-5" /></button>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <button className="theme-panel flex items-center gap-4 rounded-xl p-4 text-left transition hover:border-accent" onClick={() => setImportMode("youtube")} type="button">
+              <span className="bg-accent-soft text-accent flex h-11 w-11 items-center justify-center rounded-full"><Youtube className="h-5 w-5" /></span>
+              <span><strong className="block text-zinc-950 dark:text-white">Import from YouTube</strong><span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">Use the existing playlist URL flow.</span></span>
+            </button>
+            <button className="theme-panel flex items-center gap-4 rounded-xl p-4 text-left transition hover:border-accent" onClick={() => { setImportMode("local"); window.setTimeout(() => fileInputRef.current?.click(), 0); }} type="button">
+              <span className="bg-accent-soft text-accent flex h-11 w-11 items-center justify-center rounded-full"><FileAudio className="h-5 w-5" /></span>
+              <span><strong className="block text-zinc-950 dark:text-white">Select music files</strong><span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">Keep up to 20 audio files on this computer.</span></span>
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {view === "imported" && showImport && importMode === "youtube" ? (
         <form
           className="theme-card rounded-xl p-4 shadow-lg backdrop-blur sm:p-5"
           onSubmit={importPlaylist}
@@ -181,7 +254,7 @@ export default function PlaylistsPage() {
               <button
                 aria-label="Close import form"
                 className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 transition hover:text-accent-strong"
-                onClick={() => setShowImport(false)}
+                onClick={() => setImportMode("choose")}
                 type="button"
               >
                 <X aria-hidden="true" className="h-5 w-5" />
@@ -222,22 +295,54 @@ export default function PlaylistsPage() {
         </form>
       ) : null}
 
+      {view === "imported" && showImport && importMode === "local" ? (
+        <form className="theme-card rounded-xl p-5 shadow-lg backdrop-blur" onSubmit={importLocalPlaylist}>
+          <input
+            accept="audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.oga,.opus,.webm"
+            className="sr-only"
+            multiple
+            onChange={selectLocalFiles}
+            ref={fileInputRef}
+            type="file"
+          />
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-zinc-950 dark:text-white">Import local music</h2>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-zinc-500 dark:text-zinc-400">
+                Audio stays on this computer in this browser&apos;s private site storage. It uses local disk space, is tied to this exact site origin and port, and is removed if you clear site data.
+              </p>
+            </div>
+            <button aria-label="Back to import choices" className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 hover:text-accent-strong" onClick={() => setImportMode("choose")} type="button"><X className="h-5 w-5" /></button>
+          </div>
+          <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1.5fr_auto]">
+            <Field label="Playlist name" onChange={setImportName} placeholder="My local music" value={importName} />
+            <div className="space-y-2">
+              <span className="block text-sm font-medium text-zinc-700 dark:text-zinc-200">Music files</span>
+              <button className="theme-field flex h-10 w-full items-center px-3 text-left text-sm" onClick={() => fileInputRef.current?.click()} type="button">
+                {localFiles.length > 0 ? `${localFiles.length} file${localFiles.length === 1 ? "" : "s"} selected` : "Choose 1–20 audio files"}
+              </button>
+            </div>
+            <button className="theme-button-primary mt-auto inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold disabled:opacity-50" disabled={submitting || localFiles.length === 0} type="submit">
+              <Plus className="h-5 w-5" />{submitting ? "Saving" : "Import"}
+            </button>
+          </div>
+          {localFiles.length > 0 ? <p className="mt-3 truncate text-xs text-zinc-500 dark:text-zinc-400">{localFiles.map((file) => file.name).join(" • ")}</p> : null}
+          {status ? <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-300" role="status">{status}</p> : null}
+        </form>
+      ) : null}
+
       {playlists.length > 0 ? (
-        <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-6 xl:grid-cols-4 2xl:grid-cols-5">
-          {playlists.map((playlist) => (
-            <PlaylistCard
-              key={playlist.id}
-              onOpen={openPlaylist}
-              onPlay={playPlaylist}
-              playlist={playlist}
-            />
-          ))}
-        </div>
+        <PlaylistSections
+          imported={view === "imported"}
+          onOpen={openPlaylist}
+          onPlay={playPlaylist}
+          playlists={playlists}
+        />
       ) : (
         <EmptyState
           imported={view === "imported"}
           onAction={() =>
-            view === "imported" ? setShowImport(true) : setShowCreate(true)
+            view === "imported" ? openImportChooser() : setShowCreate(true)
           }
         />
       )}
@@ -330,6 +435,41 @@ function ViewButton({
   );
 }
 
+function PlaylistSections({
+  imported,
+  onOpen,
+  onPlay,
+  playlists
+}: {
+  imported: boolean;
+  onOpen: (playlist: Playlist) => void;
+  onPlay: (playlist: Playlist) => void;
+  playlists: Playlist[];
+}) {
+  const groups = groupPlaylistsBySource(playlists);
+  return (
+    <div className="space-y-10">
+      {([
+        ["youtube", imported ? "YouTube imports" : "YouTube playlists", groups.youtube],
+        ["local", imported ? "Local music imports" : "Local music playlists", groups.local]
+      ] as const).map(([source, label, items]) =>
+        items.length > 0 ? (
+          <section className="space-y-4" key={source}>
+            <div className="flex items-center gap-2">
+              {source === "youtube" ? <Youtube className="text-accent h-4 w-4" /> : <FileAudio className="text-accent h-4 w-4" />}
+              <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-zinc-600 dark:text-zinc-300">{label}</h2>
+              <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 dark:bg-white/5 dark:text-zinc-400">{items.length}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-6 xl:grid-cols-4 2xl:grid-cols-5">
+              {items.map((playlist) => <PlaylistCard key={playlist.id} onOpen={onOpen} onPlay={onPlay} playlist={playlist} />)}
+            </div>
+          </section>
+        ) : null
+      )}
+    </div>
+  );
+}
+
 function Field({
   label,
   onChange,
@@ -376,7 +516,7 @@ function EmptyState({
       </h2>
       <p className="mt-2 max-w-lg text-sm leading-6 text-zinc-500 dark:text-zinc-400">
         {imported
-          ? "Bring in a YouTube playlist to start building your Curatore collection."
+          ? "Bring in a YouTube playlist or select music files stored on this computer."
           : "Create a clean, personal collection and fill it with songs from your imports."}
       </p>
       <button

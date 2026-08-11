@@ -182,7 +182,7 @@ export function PlayerSongControls({
                   Open playlist
                 </Link>
               ) : null}
-              <a
+              {song.source !== "local" ? <a
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-700 transition hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-white/5"
                 href={`https://www.youtube.com/watch?v=${encodeURIComponent(song.id)}`}
                 rel="noreferrer"
@@ -191,7 +191,7 @@ export function PlayerSongControls({
               >
                 <ExternalLink aria-hidden="true" className="h-4 w-4" />
                 Open on YouTube
-              </a>
+              </a> : null}
             </div>
           ) : null}
         </div>

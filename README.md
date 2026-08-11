@@ -23,6 +23,15 @@ gestures designed for mobile use.
 
 ---
 
+## Built with Codex
+
+Curatore is being developed entirely through collaboration with OpenAI Codex.
+The project is a practical experiment in AI-assisted software development and
+a way for me to strengthen how I plan, direct, evaluate, and refine work with
+AI tools while continuing to develop my own technical judgment and workflow.
+
+---
+
 ## 🚧 Status
 
 > Active development — The player, playlist import and editing, queue, settings,

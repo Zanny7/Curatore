@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, Play } from "lucide-react";
+import { ArrowUpRight, FileAudio, Play, Youtube } from "lucide-react";
 import type { Playlist } from "@/types";
 
 type PlaylistCardProps = {
@@ -26,6 +26,10 @@ export function PlaylistCard({ playlist, onOpen, onPlay }: PlaylistCardProps) {
         <div className="absolute bottom-3 left-3 rounded-full border border-white/15 bg-black/55 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur">
           {playlist.videoCount} {playlist.videoCount === 1 ? "song" : "songs"}
         </div>
+        <div className="absolute left-3 top-3 flex items-center gap-1 rounded-full border border-white/15 bg-black/55 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white backdrop-blur">
+          {playlist.source === "local" ? <FileAudio className="h-3 w-3" /> : <Youtube className="h-3 w-3" />}
+          {playlist.source === "local" ? "Local" : "YouTube"}
+        </div>
         <ArrowUpRight
           aria-hidden="true"
           className="absolute right-3 top-3 h-5 w-5 text-white opacity-0 transition group-hover:opacity-100"
@@ -41,7 +45,7 @@ export function PlaylistCard({ playlist, onOpen, onPlay }: PlaylistCardProps) {
             {playlist.name}
           </h2>
           <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-            {playlist.source === "imported" ? "Imported playlist" : "My playlist"}
+            {playlist.origin === "imported" ? "Imported" : "My playlist"} · {playlist.source === "local" ? "Local music" : "YouTube"}
           </p>
         </button>
         <button

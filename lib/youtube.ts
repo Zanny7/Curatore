@@ -48,9 +48,11 @@ export async function fetchPlaylistById(
     thumbnailUrl:
       metadata.thumbnailUrl ?? videos[0]?.thumbnailUrl ?? PLACEHOLDER_THUMBNAIL,
     videoCount: videos.length,
-    source: "imported",
+    source: "youtube",
+    origin: "imported",
     videos: videos.map((video) => ({
       ...video,
+      source: "youtube",
       addedAt: importedAt,
       playFrequency: 1
     })),
@@ -103,7 +105,8 @@ export async function fetchPlaylistVideos(
         channelTitle:
           item.snippet.videoOwnerChannelTitle ?? item.snippet.channelTitle ?? "YouTube",
         thumbnailUrl: selectThumbnail(item.snippet.thumbnails),
-        duration: undefined
+        duration: undefined,
+        source: "youtube"
       });
     }
 
@@ -203,7 +206,8 @@ async function filterPlayableVideos(videos: VideoItem[], apiKey: string) {
         id: item.id,
         title: item.snippet.title,
         channelTitle: item.snippet.channelTitle,
-        thumbnailUrl: selectThumbnail(item.snippet.thumbnails)
+        thumbnailUrl: selectThumbnail(item.snippet.thumbnails),
+        source: "youtube"
       });
     }
   }
