@@ -68,7 +68,29 @@ AI tools while continuing to develop my own technical judgment and workflow.
 
 ## 📸 Preview
 
-> Screenshots will be added as the interface is finalized.
+### Player with navigation and queue
+
+![Curatore player with the navigation sidebar and playback queue](docs/screenshots/01-player-with-queue.png)
+
+### Focused player
+
+![Curatore player with the navigation and queue panels collapsed](docs/screenshots/02-player-collapsed-navigation.png)
+
+### Playlist management
+
+![Curatore playlist management view](docs/screenshots/03-playlist-management.png)
+
+### Tag management
+
+![Curatore tag management view](docs/screenshots/04-tag-management.png)
+
+### Polar Night theme
+
+![Curatore settings using the Polar Night theme](docs/screenshots/05-settings-polar-night.png)
+
+### Ember Amber theme
+
+![Curatore settings using the Ember Amber theme](docs/screenshots/06-settings-ember-amber.png)
 
 ---
 
