@@ -3,22 +3,36 @@
 import { ListMusic, Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode, TouchEvent } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import type {
+  MouseEvent as ReactMouseEvent,
+  ReactNode,
+  TouchEvent
+} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CuratoreCubeLogo } from "@/components/CuratoreCubeLogo";
 import { GlobalPlayerControls } from "@/components/GlobalPlayerControls";
+import { GestureStatusIndicator } from "@/components/GestureStatusIndicator";
 import { LeftSidebar } from "@/components/LeftSidebar";
 import { RightQueueSidebar } from "@/components/RightQueueSidebar";
-import { YoutubePlayer } from "@/components/YoutubePlayer";
-import { applyAccent } from "@/lib/accent";
-import { applyBackground } from "@/lib/background";
+import { MediaPlayer } from "@/components/MediaPlayer";
+import { useCuratoreGestures } from "@/context/GestureContext";
+import { applyAppearance } from "@/lib/background";
 import {
-  readStoredAccent,
   readStoredBackground,
   readStoredTheme
 } from "@/lib/storage";
 
+function isSidebarToggleBackground(target: EventTarget | null) {
+  return (
+    target instanceof Element &&
+    Boolean(target.closest("[data-sidebar-toggle-background]")) &&
+    !target.closest("[data-sidebar-toggle-content]")
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { registerSidebarToggle } = useCuratoreGestures();
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const [mobilePanel, setMobilePanel] = useState<"navigation" | "queue" | null>(
@@ -27,11 +41,33 @@ export function AppShell({ children }: { children: ReactNode }) {
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const isPlayerRoute = pathname === "/player";
 
+  const toggleBothSidebars = useCallback((): "shown" | "hidden" => {
+    const hideBoth = leftOpen || rightOpen;
+    setLeftOpen(!hideBoth);
+    setRightOpen(!hideBoth);
+    return hideBoth ? "hidden" : "shown";
+  }, [leftOpen, rightOpen]);
+
+  useEffect(() => {
+    registerSidebarToggle(toggleBothSidebars);
+    return () => registerSidebarToggle(null);
+  }, [registerSidebarToggle, toggleBothSidebars]);
+
   useEffect(() => {
     const storedTheme = readStoredTheme() ?? "dark";
-    document.documentElement.classList.toggle("dark", storedTheme === "dark");
-    applyAccent(readStoredAccent() ?? "cyan");
-    applyBackground(readStoredBackground());
+    const storedBackground = readStoredBackground();
+    const updateAppearance = () =>
+      applyAppearance(storedTheme, storedBackground);
+
+    updateAppearance();
+
+    if (storedTheme !== "system") {
+      return;
+    }
+
+    const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
+    systemTheme.addEventListener("change", updateAppearance);
+    return () => systemTheme.removeEventListener("change", updateAppearance);
   }, []);
 
   useEffect(() => {
@@ -133,9 +169,39 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }
 
+  function handleMouseDownCapture(
+    event: ReactMouseEvent<HTMLDivElement>
+  ) {
+    if (event.button !== 0 || event.detail < 2) {
+      return;
+    }
+
+    const target = event.target;
+    if (
+      !(target instanceof Element) ||
+      target.closest(
+        'input, textarea, [contenteditable]:not([contenteditable="false"]), [role="textbox"]'
+      )
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    window.getSelection()?.removeAllRanges();
+
+    if (
+      event.detail === 2 &&
+      window.matchMedia("(min-width: 1024px)").matches &&
+      isSidebarToggleBackground(target)
+    ) {
+      toggleBothSidebars();
+    }
+  }
+
   return (
     <div
-      className="min-h-screen bg-[var(--app-background-color)] bg-cover bg-center bg-fixed text-zinc-950 dark:text-zinc-50"
+      className="min-h-screen bg-[var(--theme-background)] bg-cover bg-center bg-fixed text-[var(--theme-text)]"
+      onMouseDownCapture={handleMouseDownCapture}
       onTouchEnd={handleTouchEnd}
       onTouchStart={handleTouchStart}
       style={{ backgroundImage: "var(--app-background-image)" }}
@@ -155,13 +221,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           <Menu aria-hidden="true" className="h-6 w-6" />
         </button>
-        <Link
-          aria-label="Curatore player"
-          className="text-xl font-bold tracking-tight text-white"
-          href="/player"
-        >
-          Curatore
-        </Link>
+        <div className="flex items-center gap-1.5">
+          <Link
+            aria-label="Curatore player"
+            className="text-xl font-bold tracking-tight text-white"
+            href="/player"
+          >
+            Curatore
+          </Link>
+          <CuratoreCubeLogo size="compact" />
+        </div>
         <button
           aria-controls="queue-sidebar"
           aria-expanded={mobilePanel === "queue"}
@@ -179,7 +248,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {mobilePanel ? (
         <button
           aria-label="Close open sidebar"
-          className="fixed inset-0 z-[35] bg-black/65 backdrop-blur-[2px] lg:hidden"
+          className="fixed inset-0 z-[35] bg-[var(--theme-overlay)] backdrop-blur-[2px] lg:hidden"
           onClick={() => setMobilePanel(null)}
           type="button"
         />
@@ -198,14 +267,34 @@ export function AppShell({ children }: { children: ReactNode }) {
         open={rightOpen}
       />
 
-      <main className={`min-h-screen px-4 pb-36 transition-all duration-300 sm:px-6 ${mainTopPadding} ${mainClass}`}>
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-          <YoutubePlayer visible={isPlayerRoute} />
+      <main
+        className={`min-h-screen px-4 pb-36 transition-all duration-300 sm:px-6 ${mainTopPadding} ${mainClass}`}
+        data-sidebar-toggle-background
+      >
+        <div
+          className="mx-auto flex w-full max-w-6xl flex-col gap-8"
+          data-sidebar-toggle-content
+        >
+          <div className={isPlayerRoute ? "relative" : "contents"}>
+            {isPlayerRoute ? (
+              <div
+                className="absolute -top-4 left-1/2 z-20 flex -translate-x-1/2 items-center justify-center whitespace-nowrap lg:-top-10"
+                data-gesture-player-status
+              >
+                <GestureStatusIndicator />
+              </div>
+            ) : null}
+            <MediaPlayer visible={isPlayerRoute} />
+          </div>
           {children}
         </div>
       </main>
 
-      <GlobalPlayerControls leftOpen={leftOpen} rightOpen={rightOpen} />
+      <GlobalPlayerControls
+        isPlayerRoute={isPlayerRoute}
+        leftOpen={leftOpen}
+        rightOpen={rightOpen}
+      />
     </div>
   );
 }

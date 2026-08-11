@@ -11,13 +11,19 @@ import {
 import { motion } from "framer-motion";
 import { useMemo, useState, type FocusEvent, type ReactNode } from "react";
 import { usePlayer } from "@/context/PlayerContext";
+import { GestureStatusIndicator } from "@/components/GestureStatusIndicator";
 
 type GlobalPlayerControlsProps = {
+  isPlayerRoute: boolean;
   leftOpen: boolean;
   rightOpen: boolean;
 };
 
-export function GlobalPlayerControls({ leftOpen, rightOpen }: GlobalPlayerControlsProps) {
+export function GlobalPlayerControls({
+  isPlayerRoute,
+  leftOpen,
+  rightOpen
+}: GlobalPlayerControlsProps) {
   const [controlsOpen, setControlsOpen] = useState(false);
   const {
     currentVideo,
@@ -43,7 +49,6 @@ export function GlobalPlayerControls({ leftOpen, rightOpen }: GlobalPlayerContro
       return;
     }
 
-    window.__curatoreYoutubeControl?.(!isPlaying);
     togglePlayback();
   }
 
@@ -57,8 +62,14 @@ export function GlobalPlayerControls({ leftOpen, rightOpen }: GlobalPlayerContro
     <>
       <section
         aria-label="Global playback controls"
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 shadow-soft-dark backdrop-blur lg:hidden"
+        className="theme-control fixed inset-x-0 bottom-0 z-30 border-x-0 border-b-0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 shadow-soft-dark backdrop-blur lg:hidden"
       >
+        {!isPlayerRoute ? (
+          <GestureStatusIndicator
+            className="absolute left-4 top-1/2 -translate-y-1/2"
+            variant="global"
+          />
+        ) : null}
         <div className="mx-auto flex max-w-md items-center justify-center gap-1">
           <ControlButton
             active={shuffle}
@@ -82,8 +93,8 @@ export function GlobalPlayerControls({ leftOpen, rightOpen }: GlobalPlayerContro
                   ? "Pause video"
                   : "Play video"
             }
-            className={`mx-1 flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/5 transition hover:text-accent-strong active:text-accent-strong disabled:opacity-50 ${
-              isPlaying ? "text-accent-strong" : "text-white"
+            className={`mx-1 flex h-12 w-12 items-center justify-center rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface-subtle)] transition hover:text-accent-strong active:text-accent-strong disabled:opacity-50 ${
+              isPlaying ? "text-accent-strong" : "text-[var(--theme-text)]"
             }`}
             disabled={!currentVideo || !playerReady}
             onClick={handleTogglePlayback}
@@ -113,6 +124,7 @@ export function GlobalPlayerControls({ leftOpen, rightOpen }: GlobalPlayerContro
       >
         <div
           className="pointer-events-auto mx-auto flex h-28 w-full max-w-5xl items-end justify-center"
+          data-sidebar-toggle-background
           onBlur={handleControlsBlur}
           onFocusCapture={() => setControlsOpen(true)}
           onMouseEnter={() => setControlsOpen(true)}
@@ -121,10 +133,17 @@ export function GlobalPlayerControls({ leftOpen, rightOpen }: GlobalPlayerContro
           <motion.section
             animate={{ y: controlsOpen ? "0%" : "84%" }}
             aria-label="Global playback controls"
-            className="pointer-events-auto relative rounded-t-2xl border border-b-0 border-[var(--app-sidebar-border)] bg-[var(--app-control-bg)] p-3 shadow-soft-dark backdrop-blur"
+            className="theme-control pointer-events-auto relative rounded-t-2xl border-b-0 p-3 shadow-soft-dark backdrop-blur"
+            data-sidebar-toggle-content
             initial={false}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           >
+            {!isPlayerRoute ? (
+              <GestureStatusIndicator
+                className="absolute right-2 top-2"
+                variant="global"
+              />
+            ) : null}
             <div
               aria-hidden="true"
               className="absolute left-1/2 top-0 h-1 w-12 -translate-x-1/2 rounded-full bg-zinc-500/70"
@@ -155,7 +174,7 @@ export function GlobalPlayerControls({ leftOpen, rightOpen }: GlobalPlayerContro
               className={`flex h-12 w-12 items-center justify-center rounded-full transition hover:text-accent-strong active:text-accent-strong disabled:opacity-50 ${
                 isPlaying
                   ? "text-accent-strong"
-                  : "text-white"
+                  : "text-[var(--theme-text)]"
               }`}
               disabled={!currentVideo || !playerReady}
               onClick={handleTogglePlayback}
@@ -205,7 +224,7 @@ function ControlButton({
       className={`rounded-full p-3 transition disabled:cursor-not-allowed disabled:opacity-35 ${
         active
           ? "text-accent-strong"
-          : "text-zinc-300 hover:text-accent-strong active:text-accent-strong"
+          : "text-[var(--theme-text-muted)] hover:text-accent-strong active:text-accent-strong"
       }`}
       disabled={disabled}
       onClick={onClick}

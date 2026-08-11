@@ -46,7 +46,7 @@ export default function EditPlaylistPage() {
           <ArrowLeft aria-hidden="true" className="h-4 w-4" />
           Back to playlists
         </button>
-        <div className="rounded-2xl border border-dashed border-zinc-300 bg-white/70 p-8 text-center shadow-sm dark:border-white/10 dark:bg-neutral-900/70">
+        <div className="theme-card rounded-xl border-dashed p-8 text-center shadow-sm">
           <h1 className="text-xl font-semibold text-zinc-950 dark:text-white">
             Playlist not found
           </h1>
@@ -81,7 +81,7 @@ export default function EditPlaylistPage() {
           </p>
         </div>
         <button
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-zinc-950 px-5 py-3 font-semibold text-zinc-950 transition hover:border-accent hover:text-accent-strong active:text-accent-strong dark:border-white dark:text-white"
+          className="theme-button-secondary inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition"
           onClick={() => handleLoad(playlist)}
           type="button"
         >
@@ -94,7 +94,7 @@ export default function EditPlaylistPage() {
         <div className="space-y-3">
           {playlist.videos.map((video) => (
             <div
-              className="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-neutral-900 md:flex-row md:items-center"
+              className="theme-card flex flex-col gap-3 rounded-xl p-3 shadow-sm md:flex-row md:items-center"
               key={`${video.id}-${video.title}`}
             >
               <div className="flex min-w-0 flex-1 items-center gap-4">
@@ -149,7 +149,7 @@ export default function EditPlaylistPage() {
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-zinc-300 bg-white/70 p-8 text-center shadow-sm dark:border-white/10 dark:bg-neutral-900/70">
+        <div className="theme-card rounded-xl border-dashed p-8 text-center shadow-sm">
           <h2 className="text-xl font-semibold text-zinc-950 dark:text-white">
             No songs left
           </h2>
@@ -190,7 +190,7 @@ function TrimInput({
       </span>
       <input
         aria-label={`${label} time`}
-        className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-2 text-sm text-zinc-950 outline-none transition focus:border-accent focus:ring-4 focus:ring-[var(--accent-ring)] dark:border-white/10 dark:bg-neutral-950 dark:text-white"
+        className="theme-field h-10 w-full rounded-lg px-2 text-sm transition"
         inputMode="decimal"
         onBlur={(event) => commitValue(event.target.value)}
         onChange={(event) => setDraftValue(event.target.value)}

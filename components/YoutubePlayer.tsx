@@ -23,12 +23,6 @@ type YoutubeCommand =
   | "setVolume"
   | "unloadModule";
 
-declare global {
-  interface Window {
-    __curatoreYoutubeControl?: (playing: boolean) => void;
-  }
-}
-
 const YOUTUBE_ORIGIN = "https://www.youtube.com";
 
 export function YoutubePlayer({ visible }: YoutubePlayerProps) {
@@ -37,14 +31,22 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
   const iframeLoadedRef = useRef(false);
   const lastCommandRef = useRef<"pauseVideo" | "playVideo" | null>(null);
   const endReachedRef = useRef(false);
+  const playbackStartedRef = useRef(false);
   const readyTimeoutRef = useRef<number | null>(null);
   const commandTimeoutsRef = useRef<number[]>([]);
   const captionTimeoutsRef = useRef<number[]>([]);
   const captionsDisabledOnPlaybackRef = useRef(false);
   const trimEndTimeoutRef = useRef<number | null>(null);
   const lastTapRef = useRef<number | null>(null);
-  const { currentVideo, isPlaying, next, setPlayback, setPlayerReady, volume } =
-    usePlayer();
+  const {
+    advanceAfterNaturalEnd,
+    currentVideo,
+    isPlaying,
+    playbackRevision,
+    setPlayback,
+    setPlayerReady,
+    volume
+  } = usePlayer();
 
   const embedUrl = useMemo(() => {
     if (!currentVideo || typeof window === "undefined") {
@@ -147,6 +149,15 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
     [sendCommandWithRetry]
   );
 
+  const handleNaturalEnd = useCallback(() => {
+    if (endReachedRef.current || !playbackStartedRef.current) {
+      return;
+    }
+
+    endReachedRef.current = true;
+    advanceAfterNaturalEnd(playbackRevision);
+  }, [advanceAfterNaturalEnd, playbackRevision]);
+
   const handleIframeLoad = useCallback(() => {
     if (readyTimeoutRef.current) {
       window.clearTimeout(readyTimeoutRef.current);
@@ -178,16 +189,9 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
   ]);
 
   useEffect(() => {
-    window.__curatoreYoutubeControl = syncPlayback;
-
-    return () => {
-      delete window.__curatoreYoutubeControl;
-    };
-  }, [syncPlayback]);
-
-  useEffect(() => {
     lastCommandRef.current = null;
     endReachedRef.current = false;
+    playbackStartedRef.current = false;
     iframeLoadedRef.current = false;
     captionsDisabledOnPlaybackRef.current = false;
     setPlayerReady(false);
@@ -204,6 +208,7 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
     clearCommandRetries,
     clearTrimEndTimeout,
     currentVideo?.id,
+    playbackRevision,
     setPlayerReady
   ]);
 
@@ -234,12 +239,7 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
       (currentVideo.endSeconds - (currentVideo.startSeconds ?? 0)) * 1000;
 
     trimEndTimeoutRef.current = window.setTimeout(() => {
-      if (endReachedRef.current) {
-        return;
-      }
-
-      endReachedRef.current = true;
-      next();
+      handleNaturalEnd();
     }, trimDurationMs);
 
     return clearTrimEndTimeout;
@@ -248,8 +248,8 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
     currentVideo?.endSeconds,
     currentVideo?.id,
     currentVideo?.startSeconds,
+    handleNaturalEnd,
     isPlaying,
-    next
   ]);
 
   useEffect(() => {
@@ -274,7 +274,10 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
 
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
-      if (event.origin !== YOUTUBE_ORIGIN) {
+      if (
+        event.origin !== YOUTUBE_ORIGIN ||
+        event.source !== iframeRef.current?.contentWindow
+      ) {
         return;
       }
 
@@ -300,8 +303,7 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
           payload.info >= currentVideo.endSeconds &&
           !endReachedRef.current
         ) {
-          endReachedRef.current = true;
-          next();
+          handleNaturalEnd();
         }
 
         return;
@@ -317,11 +319,11 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
       };
 
       if (info.playerState === 0) {
-        endReachedRef.current = true;
-        next();
+        handleNaturalEnd();
       }
 
       if (info.playerState === 1) {
+        playbackStartedRef.current = true;
         if (!captionsDisabledOnPlaybackRef.current) {
           captionsDisabledOnPlaybackRef.current = true;
           disableCaptionsWithRetry();
@@ -340,8 +342,7 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
         info.currentTime >= currentVideo.endSeconds &&
         !endReachedRef.current
       ) {
-        endReachedRef.current = true;
-        next();
+        handleNaturalEnd();
       }
     }
 
@@ -352,7 +353,7 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
     currentVideo?.id,
     currentVideo?.startSeconds,
     disableCaptionsWithRetry,
-    next,
+    handleNaturalEnd,
     setPlayback
   ]);
 
@@ -375,7 +376,7 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
   ]);
 
   const shellClass = visible
-    ? "relative mx-auto aspect-video w-full max-w-5xl overflow-hidden rounded-2xl border border-zinc-200 bg-black shadow-sm dark:border-white/10"
+    ? "relative mx-auto aspect-video w-full max-w-5xl overflow-hidden rounded-2xl border border-[var(--theme-border)] bg-black shadow-sm"
     : "fixed -left-[200vw] top-0 h-[180px] w-[320px] overflow-hidden opacity-0 pointer-events-none";
 
   const enterFullscreen = useCallback(() => {
@@ -410,6 +411,7 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
             className="pointer-events-none h-full w-full"
+            key={`${currentVideo?.id ?? "video"}-${playbackRevision}`}
             onLoad={handleIframeLoad}
             ref={iframeRef}
             src={embedUrl}
@@ -429,7 +431,7 @@ export function YoutubePlayer({ visible }: YoutubePlayerProps) {
           />
         </>
       ) : (
-        <div className="flex h-full w-full flex-col items-center justify-center bg-[radial-gradient(circle_at_center,var(--accent-soft),transparent_40%),linear-gradient(135deg,#09090b,#18181b)] px-4 py-3 text-center sm:px-6">
+        <div className="media-on-dark flex h-full w-full flex-col items-center justify-center bg-[radial-gradient(circle_at_center,var(--accent-soft),transparent_40%),linear-gradient(135deg,#09090b,#18181b)] px-4 py-3 text-center sm:px-6">
           <div className="text-accent mb-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 shadow-sm sm:mb-4 sm:h-16 sm:w-16 lg:h-20 lg:w-20">
             <PlayCircle aria-hidden="true" className="h-7 w-7 sm:h-9 sm:w-9 lg:h-11 lg:w-11" />
           </div>
